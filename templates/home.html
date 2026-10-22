@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang Chủ - Nghe Truyện Online</title>
+    <style>
+        :root {
+            --bg-outer: #141417;
+            --bg-container: #1b1b22;
+            --bg-sidebar: #16161c;
+            --bg-element: #252630;
+            --bg-tag: #2d2e3a;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-yellow: #eab308;
+            --border-color: #262730;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-outer);
+            color: var(--text-main);
+            margin: 0;
+            padding: 25px;
+            display: flex;
+            justify-content: center;
+        }
+        .app-wrapper {
+            display: flex;
+            width: 100%;
+            max-width: 1350px;
+            background-color: var(--bg-container);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--border-color);
+            min-height: 90vh;
+        }
+        .sidebar {
+            width: 240px;
+            background-color: var(--bg-sidebar);
+            padding: 25px 20px;
+            border-right: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 1.5px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .nav-list { list-style: none; padding: 0; margin: 0; }
+        .nav-item {
+            padding: 11px 12px;
+            color: #cbd5e1;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+        }
+        .nav-item:hover, .nav-item.active {
+            background-color: var(--bg-element);
+            color: var(--accent-yellow);
+            font-weight: 600;
+        }
+        .nav-divider { height: 1px; background-color: var(--border-color); margin: 15px 0; }
+        .main-area { flex: 1; padding: 20px 35px; overflow-y: auto; }
+        .top-bar {
+            display: flex;
+            gap: 25px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+        .top-bar a { color: #cbd5e1; text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+        .search-box { position: relative; max-width: 480px; margin-bottom: 20px; }
+        .search-box input {
+            width: 100%;
+            background-color: #131419;
+            border: 1px solid #2e303e;
+            padding: 12px 40px 12px 42px;
+            border-radius: 30px;
+            color: #ffffff;
+            font-size: 14px;
+            outline: none;
+        }
+        .search-box input:focus { border-color: var(--accent-yellow); }
+        .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .clear-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); cursor: pointer; }
+        .tags-wrapper { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 30px; }
+        .tag-item {
+            background-color: var(--bg-tag);
+            color: #d1d5db;
+            padding: 7px 15px;
+            border-radius: 5px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .tag-item:hover, .tag-item.active {
+            background-color: #3f4152;
+            color: var(--accent-yellow);
+            border-color: var(--accent-yellow);
+            font-weight: 600;
+        }
+        .section-box { background-color: #16171d; border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 14px;
+            border-bottom: 2px solid var(--accent-yellow);
+            margin-bottom: 22px;
+        }
+        .section-title { color: var(--accent-yellow); font-size: 16px; font-weight: bold; }
+        .btn-doi {
+            background-color: var(--accent-yellow);
+            color: #000;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .grid-truyen { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 20px; }
+        .card-truyen {
+            background-color: var(--bg-element);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #2e303e;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+        .card-truyen:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); border-color: var(--accent-yellow); }
+        .cover-img {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            background-color: #1e1f29;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        .card-info { padding: 12px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .story-name { color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; margin-bottom: 8px; display: block; }
+        .card-tags { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; }
+        .mini-tag { background-color: #141417; color: var(--accent-yellow); font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 1px solid #333; }
+
+        .sidebar-right {
+            width: 310px;
+            background-color: var(--bg-sidebar);
+            padding: 20px 15px;
+            border-left: 1px solid var(--border-color);
+            flex-shrink: 0;
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+        .top-tuan-title {
+            color: var(--accent-yellow);
+            font-size: 15px;
+            font-weight: bold;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--accent-yellow);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .top-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 8px;
+            border-bottom: 1px solid #262730;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .top-item:hover { background-color: var(--bg-element); }
+        .top-rank {
+            width: 24px;
+            height: 24px;
+            background-color: #2d2e3a;
+            color: var(--text-muted);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .top-item:nth-child(1) .top-rank { background-color: #eab308; color: #000; }
+        .top-item:nth-child(2) .top-rank { background-color: #94a3b8; color: #000; }
+        .top-item:nth-child(3) .top-rank { background-color: #b45309; color: #fff; }
+        .top-thumb { width: 42px; height: 55px; object-fit: cover; border-radius: 4px; background-color: #1e1f29; flex-shrink: 0; }
+        .top-info { overflow: hidden; }
+        .top-name {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+        .top-item:hover .top-name { color: var(--accent-yellow); }
+        .top-date { color: var(--text-muted); font-size: 11px; }
+    </style>
+</head>
+<body>
+    <div class="app-wrapper">
+        <div class="sidebar">
+            <div class="logo" onclick="window.location.href='/'">NGHETRUYEN</div>
+            <ul class="nav-list">
+                <li class="nav-item active" onclick="locTheoTag('all', this)">🏠 Home</li>
+                <li class="nav-item" onclick="locTheoTag('all', this)">📚 Tất Cả Truyện</li>
+                <div class="nav-divider"></div>
+                {% for tag in danh_sach_tags %}
+                    <li class="nav-item" onclick="locTheoTag('{{ tag }}', this)">🏷️ {{ tag | replace('#', '') | title }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="main-area">
+            <div class="top-bar">
+                <a href="/">🏠 HOME</a>
+                <a href="#">📄 ABOUT</a>
+                <a href="#">📞 CONTACT</a>
+            </div>
+
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="searchInput" placeholder="Nhập tên truyện hoặc #tag cần tìm..." onkeyup="locTruyen()">
+                <span class="clear-btn" onclick="xoaTimKiem()">✕</span>
+            </div>
+
+            <div class="tags-wrapper">
+                <span class="tag-item active" onclick="locTheoTag('all', this)">Tất cả</span>
+                {% for tag in danh_sach_tags %}
+                    <span class="tag-item" onclick="locTheoTag('{{ tag }}', this)">{{ tag }}</span>
+                {% endfor %}
+            </div>
+
+            <div class="section-box">
+                <div class="section-header">
+                    <div class="section-title" id="sectionTitle">🎲 Tất cả truyện</div>
+                    <button class="btn-doi" onclick="xaoTronTruyen()">🔄 Đổi</button>
+                </div>
+
+                <div class="grid-truyen" id="storyGrid">
+                    {% for truyen in danh_sach_truyen %}
+                        <div class="card-truyen" data-tags="{{ truyen.tags_str }}" onclick="window.location.href='/ghi-nhan/{{ truyen.thu_muc_raw }}'">
+                            {% if truyen.anh_bia %}
+                                <img src="{{ truyen.anh_bia }}" alt="Bìa {{ truyen.ten_hien_thi }}" class="cover-img">
+                            {% else %}
+                                <div class="cover-img">Chưa có ảnh bìa</div>
+                            {% endif %}
+
+                            <div class="card-info">
+                                <span class="story-name">{{ truyen.ten_hien_thi }}</span>
+                                {% if truyen.tags %}
+                                <div class="card-tags">
+                                    {% for t in truyen.tags %}
+                                        <span class="mini-tag">{{ t }}</span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-right">
+            <div class="top-tuan-title">🔥 HOT</div>
+            <div class="top-list">
+                {% for item in hot_list %}
+                    <div class="top-item" onclick="window.location.href='/ghi-nhan/{{ item.thu_muc_raw }}'">
+                        <div class="top-rank">{{ loop.index }}</div>
+                        {% if item.anh_bia %}
+                            <img src="{{ item.anh_bia }}" class="top-thumb" alt="Thumb">
+                        {% else %}
+                            <div class="top-thumb" style="display:flex; align-items:center; justify-content:center; font-size:10px;">No img</div>
+                        {% endif %}
+                        <div class="top-info">
+                            <div class="top-name">{{ item.ten_hien_thi }}</div>
+                            <div class="top-date">Truy cập: {{ item.luot_xem }} lần</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tagParam = urlParams.get('tag');
+            if (tagParam) {
+                const allTagElements = document.querySelectorAll('.tag-item, .nav-item');
+                allTagElements.forEach(el => {
+                    if (el.innerText.toLowerCase().includes(tagParam.toLowerCase())) {
+                        locTheoTag(tagParam, el);
+                    }
+                });
+            }
+        });
+
+        function locTheoTag(tagCanTim, element) {
+            document.querySelectorAll('.tag-item, .nav-item').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            const titleEl = document.getElementById('sectionTitle');
+            if (titleEl) {
+                titleEl.innerText = tagCanTim === 'all' ? '🎲 Tất cả truyện' : '🏷️ Truyện có tag: ' + tagCanTim;
+            }
+
+            const cards = document.querySelectorAll('.card-truyen');
+            cards.forEach(card => {
+                const tagsCuaTruyen = card.getAttribute('data-tags') || '';
+                if (tagCanTim === 'all' || tagsCuaTruyen.toLowerCase().includes(tagCanTim.toLowerCase())) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function locTruyen() {
+            const input = document.getElementById('searchInput').value.toLowerCase();
+            const cards = document.querySelectorAll('.card-truyen');
+
+            cards.forEach(card => {
+                const title = card.querySelector('.story-name').innerText.toLowerCase();
+                const tags = card.getAttribute('data-tags').toLowerCase();
+
+                if (title.includes(input) || tags.includes(input)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function xoaTimKiem() {
+            document.getElementById('searchInput').value = '';
+            const firstTag = document.querySelector('.tag-item');
+            if (firstTag) locTheoTag('all', firstTag);
+        }
+
+        function xaoTronTruyen() {
+            const grid = document.getElementById('storyGrid');
+            if (!grid) return;
+            for (let i = grid.children.length; i >= 0; i--) {
+                grid.appendChild(grid.children[Math.random() * i | 0]);
+            }
+        }
+    </script>
+</body>
+</html>

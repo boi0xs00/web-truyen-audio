@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ ten_truyen }} - Nghe Truyện Online</title>
+    <style>
+        :root {
+            --bg-outer: #141417;
+            --bg-container: #1b1b22;
+            --bg-sidebar: #16161c;
+            --bg-element: #252630;
+            --bg-tag: #2d2e3a;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-yellow: #eab308;
+            --primary-orange: #f97316;
+            --border-color: #262730;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-outer);
+            color: var(--text-main);
+            margin: 0;
+            padding: 25px;
+            display: flex;
+            justify-content: center;
+        }
+        .app-wrapper {
+            display: flex;
+            width: 100%;
+            max-width: 1350px;
+            background-color: var(--bg-container);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--border-color);
+            min-height: 90vh;
+        }
+        .sidebar {
+            width: 240px;
+            background-color: var(--bg-sidebar);
+            padding: 25px 20px;
+            border-right: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 1.5px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+        }
+        .nav-list { list-style: none; padding: 0; margin: 0; }
+        .nav-item {
+            padding: 11px 12px;
+            color: #cbd5e1;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+            margin-bottom: 4px;
+        }
+        .nav-item:hover { background-color: var(--bg-element); color: var(--accent-yellow); }
+        .nav-divider { height: 1px; background-color: var(--border-color); margin: 15px 0; }
+        .main-area { flex: 1; padding: 20px 35px; overflow-y: auto; }
+        .top-bar {
+            display: flex;
+            gap: 25px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 25px;
+        }
+        .top-bar a { color: #cbd5e1; text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+        .story-header-box {
+            display: flex;
+            gap: 25px;
+            background-color: var(--bg-sidebar);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .story-cover { width: 130px; height: 170px; object-fit: cover; border-radius: 6px; background-color: #2e303e; }
+        .story-meta h1 { color: #ffffff; font-size: 22px; margin: 0 0 10px 0; }
+        .story-meta p { color: var(--text-muted); font-size: 13.5px; margin: 0; }
+        .story-intro-box { background-color: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; margin-bottom: 25px; }
+        .intro-title { color: var(--accent-yellow); font-size: 15px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .intro-content { color: var(--text-muted); font-size: 13.5px; line-height: 1.6; white-space: pre-line; }
+        .player-box { background-color: var(--bg-sidebar); border-radius: 10px; border: 1px solid var(--border-color); padding: 20px; margin-bottom: 25px; }
+        .chapter-search { position: relative; margin-bottom: 15px; }
+        .chapter-search input {
+            width: 100%;
+            background-color: #131419;
+            border: 1px solid #2e303e;
+            padding: 10px 15px 10px 38px;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13.5px;
+            outline: none;
+        }
+        .chapter-search span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+        .audio-player-ui { background-color: #131419; border-radius: 8px; padding: 15px; border: 1px solid #2e303e; margin-bottom: 15px; position: relative; }
+        .now-playing-title { color: var(--accent-yellow); font-weight: bold; font-size: 15px; margin-bottom: 12px; text-align: center; }
+        audio { width: 100%; height: 40px; outline: none; }
+        .player-tools-bar { display: flex; justify-content: center; gap: 10px; margin-top: 10px; align-items: center; }
+        .tool-btn {
+            background-color: #252630;
+            color: #cbd5e1;
+            border: 1px solid #3f4152;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .tool-btn:hover { background-color: #3f4152; color: #fff; }
+        .panel-box { display: none; background-color: #181920; border: 1px solid #3f4152; border-radius: 8px; padding: 15px; margin-top: 12px; text-align: center; }
+        .panel-box.show { display: block; }
+        .panel-inputs { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
+        .panel-inputs input, .panel-inputs select {
+            background-color: #131419;
+            border: 1px solid #3f4152;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            width: 80px;
+            text-align: center;
+            outline: none;
+        }
+        .panel-inputs select { width: 150px; text-align: left; }
+        .btn-action-panel { background-color: #3b82f6; color: white; border: none; padding: 6px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .btn-action-panel:hover { background-color: #2563eb; }
+        .control-buttons-bar { display: flex; gap: 10px; margin: 15px 0; justify-content: center; }
+        .btn-control {
+            background-color: var(--bg-tag);
+            color: #fff;
+            border: 1px solid #3f4152;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-control:hover { background-color: #3f4152; }
+        .btn-download-vip {
+            background-color: var(--primary-orange);
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            display: block;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(249, 115, 22, 0.3);
+        }
+        .btn-download-vip:hover { background-color: #ea580c; }
+        .playlist { max-height: 300px; overflow-y: auto; background-color: #131419; border-radius: 6px; border: 1px solid #2e303e; }
+        .playlist::-webkit-scrollbar { width: 6px; }
+        .playlist::-webkit-scrollbar-thumb { background: #3f4152; border-radius: 3px; }
+        .chapter-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #262730;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 13.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chapter-item:hover { background-color: var(--bg-element); color: #fff; }
+        .chapter-item.active { background-color: #292524; color: var(--accent-yellow); font-weight: bold; border-left: 3px solid var(--accent-yellow); }
+        .story-tags-footer { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
+        .tag-label { color: var(--text-muted); font-size: 13px; }
+        .badge-tag {
+            background-color: var(--bg-tag);
+            color: #d1d5db;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .badge-tag:hover { background-color: #3f4152; color: var(--accent-yellow); }
+
+        .sidebar-right {
+            width: 310px;
+            background-color: var(--bg-sidebar);
+            padding: 20px 15px;
+            border-left: 1px solid var(--border-color);
+            flex-shrink: 0;
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+        .top-tuan-title {
+            color: var(--accent-yellow);
+            font-size: 15px;
+            font-weight: bold;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--accent-yellow);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .top-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 8px;
+            border-bottom: 1px solid #262730;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+        .top-item:hover { background-color: var(--bg-element); }
+        .top-rank {
+            width: 24px;
+            height: 24px;
+            background-color: #2d2e3a;
+            color: var(--text-muted);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .top-item:nth-child(1) .top-rank { background-color: #eab308; color: #000; }
+        .top-item:nth-child(2) .top-rank { background-color: #94a3b8; color: #000; }
+        .top-item:nth-child(3) .top-rank { background-color: #b45309; color: #fff; }
+        .top-thumb { width: 42px; height: 55px; object-fit: cover; border-radius: 4px; background-color: #1e1f29; flex-shrink: 0; }
+        .top-info { overflow: hidden; }
+        .top-name {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 4px;
+        }
+        .top-item:hover .top-name { color: var(--accent-yellow); }
+        .top-date { color: var(--text-muted); font-size: 11px; }
+
+        #resume-popup {
+            display: none;
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #1f2937;
+            border: 1px solid #374151;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+            border-radius: 30px;
+            padding: 10px 20px;
+            z-index: 9999;
+            align-items: center;
+            gap: 15px;
+            color: #fff;
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp {
+            from { transform: translate(-50%, 50px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+        .popup-icon {
+            width: 36px;
+            height: 36px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .popup-info .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; }
+        .popup-info .title { font-size: 13.5px; font-weight: bold; color: #fff; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .popup-time-badge { background-color: #111827; border: 1px solid #374151; padding: 4px 10px; border-radius: 15px; font-size: 12px; color: #93c5fd; font-family: monospace; }
+        .popup-btn-play {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .popup-btn-play:hover { background-color: #2563eb; }
+        .popup-btn-skip { background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; }
+        .popup-btn-skip:hover { color: #fff; }
+        .popup-close { background: none; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer; margin-left: 5px; }
+        .popup-close:hover { color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="app-wrapper">
+        <div class="sidebar">
+            <div class="logo" onclick="window.location.href='/'">NGHETRUYEN</div>
+            <ul class="nav-list">
+                <li class="nav-item" onclick="window.location.href='/'">🏠 Home</li>
+                <li class="nav-item" onclick="scrollToTags()">📚 Thể Loại</li>
+                <div class="nav-divider"></div>
+                <li class="nav-item" onclick="window.location.href='/'">👈 Quay lại Trang chủ</li>
+            </ul>
+        </div>
+
+        <div class="main-area">
+            <div class="top-bar">
+                <a href="/">🏠 HOME</a>
+                <a href="#">📄 ABOUT</a>
+                <a href="#">📞 CONTACT</a>
+            </div>
+
+            <div class="story-header-box">
+                <img src="/audio/{{ thu_muc }}/cover.jpg" alt="Bìa truyện" class="cover-img story-cover" onerror="this.src='https://via.placeholder.com/130x170?text=No+Cover'">
+                <div class="story-meta">
+                    <h1>{{ ten_truyen }}</h1>
+                    <p>🎧 Kho audio chất lượng cao. Tổng số: <strong>{{ danh_sach_chuong | length }} tập</strong></p>
+                    <p style="margin-top: 8px; color: var(--accent-yellow);">Trạng thái: Đang phát trực tuyến</p>
+                </div>
+            </div>
+
+            <div class="story-intro-box">
+                <div class="intro-title">📖 Giới thiệu nội dung</div>
+                <div class="intro-content">{{ gioi_thieu }}</div>
+            </div>
+
+            <div class="player-box">
+                <div class="chapter-search">
+                    <span>🔍</span>
+                    <input type="text" id="searchChapter" placeholder="Tìm chương truyện..." onkeyup="locDanhSachChuong()">
+                </div>
+
+                <div class="audio-player-ui">
+                    <div class="now-playing-title" id="current-title">Đang chọn chương...</div>
+                    <audio id="audio-player" controls></audio>
+
+                    <div class="player-tools-bar">
+                        <button class="tool-btn" onclick="doiTocDo()">⚡ <span id="speedLabel">1.0x</span></button>
+                        <button class="tool-btn" onclick="togglePanel('jumpPanel')">⚡ Nhảy đến</button>
+                        <button class="tool-btn" onclick="togglePanel('timerPanel')">🕒 Hẹn giờ</button>
+                    </div>
+
+                    <div id="jumpPanel" class="panel-box">
+                        <div class="panel-inputs">
+                            <input type="number" id="jumpHour" placeholder="Giờ" min="0" value="0">
+                            <input type="number" id="jumpMin" placeholder="Phút" min="0" max="59" value="0">
+                            <input type="number" id="jumpSec" placeholder="Giây" min="0" max="59" value="0">
+                        </div>
+                        <button class="btn-action-panel" onclick="nhayDenThoiDiem()">NHẢY</button>
+                    </div>
+
+                    <div id="timerPanel" class="panel-box">
+                        <div class="panel-inputs">
+                            <select id="timerSelect">
+                                <option value="0">Tắt hẹn giờ</option>
+                                <option value="5">Sau 5 phút</option>
+                                <option value="15">Sau 15 phút</option>
+                                <option value="30">Sau 30 phút</option>
+                                <option value="60">Sau 60 phút</option>
+                            </select>
+                        </div>
+                        <button class="btn-action-panel" onclick="batDauHenGio()">BẮT ĐẦU</button>
+                        <div id="timerStatus" style="font-size: 12px; color: var(--accent-yellow); margin-top: 8px;"></div>
+                    </div>
+                </div>
+
+                <div class="control-buttons-bar">
+                    <button class="btn-control" onclick="tua(-30)">⏪ -30s</button>
+                    <button class="btn-control" onclick="tua(-10)">◀ -10s</button>
+                    <button class="btn-control" onclick="tua(10)">+10s ▶</button>
+                    <button class="btn-control" onclick="tua(30)">+30s ⏩</button>
+                </div>
+
+                <div class="playlist" id="playlist">
+                    {% for file in danh_sach_chuong %}
+                        <div class="chapter-item" data-name="{{ file }}" onclick="chonVaPhatChuong('{{ file }}', this)">
+                            <span>▶ {{ file | replace('.mp3', '') }}</span>
+                            <span style="font-size: 11px; color: var(--text-muted);">Audio MP3</span>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <a href="#" id="downloadBtn" class="btn-download-vip" download>⬇ TẢI FILE MP3 TẬP NÀY</a>
+                </div>
+            </div>
+
+            <div class="story-tags-footer">
+                <span class="tag-label">Tags:</span>
+                {% for tag in story_tags %}
+                    <a href="/?tag={{ tag | urlencode }}" class="badge-tag">{{ tag }}</a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="sidebar-right">
+            <div class="top-tuan-title">🔥 HOT</div>
+            <div class="top-list">
+                {% for item in hot_list %}
+                    <div class="top-item" onclick="window.location.href='/ghi-nhan/{{ item.thu_muc_raw }}'">
+                        <div class="top-rank">{{ loop.index }}</div>
+                        {% if item.anh_bia %}
+                            <img src="{{ item.anh_bia }}" class="top-thumb" alt="Thumb">
+                        {% else %}
+                            <div class="top-thumb" style="display:flex; align-items:center; justify-content:center; font-size:10px;">No img</div>
+                        {% endif %}
+                        <div class="top-info">
+                            <div class="top-name">{{ item.ten_hien_thi }}</div>
+                            <div class="top-date">Truy cập: {{ item.luot_xem }} lần</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div id="resume-popup">
+        <div class="popup-icon">🎧</div>
+        <div class="popup-info">
+            <div class="label">Tiếp tục nghe</div>
+            <div class="title" id="popup-chapter-name">Tập...</div>
+        </div>
+        <div class="popup-time-badge" id="popup-time-text">00:00 / 00:00</div>
+        <button class="popup-btn-play" onclick="chapNhanTiepTuc()">▶ Tiếp tục</button>
+        <button class="popup-btn-skip" onclick="dongPopup()">Bỏ qua</button>
+        <button class="popup-close" onclick="dongPopup()">✕</button>
+    </div>
+
+    <script>
+        const player = document.getElementById('audio-player');
+        const titleDisplay = document.getElementById('current-title');
+        const downloadBtn = document.getElementById('downloadBtn');
+        let currentItem = null;
+        let timerInterval = null;
+
+        const storageKey = "audio_progress_v2_{{ thu_muc | urlencode }}";
+        let savedData = {};
+        try {
+            savedData = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch (e) {
+            savedData = {};
+        }
+
+        function formatTime(seconds) {
+            let m = Math.floor(seconds / 60);
+            let s = Math.floor(seconds % 60);
+            let h = Math.floor(m / 60);
+            m = m % 60;
+            if (h > 0) {
+                return `${h}:${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+            }
+            return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+        }
+
+        let pendingFilename = savedData.filename || null;
+        let pendingTime = savedData.currentTime || 0;
+
+        function chonVaPhatChuong(filename, element) {
+            playAudioDirect(filename, element, 0);
+            dongPopup();
+        }
+
+        function playAudioDirect(filename, element, startTime = 0) {
+            const audioSrc = "/audio/{{ thu_muc }}/" + filename;
+
+            if (player.src !== window.location.origin + audioSrc) {
+                player.src = audioSrc;
+                player.currentTime = startTime;
+                player.play().catch(e => console.log("Auto-play blocked:", e));
+            } else if (startTime > 0) {
+                player.currentTime = startTime;
+            }
+
+            const tenHienThi = element.querySelector('span').innerText.replace('▶ ', '');
+            titleDisplay.innerText = "Đang phát: " + tenHienThi;
+            downloadBtn.href = audioSrc;
+            downloadBtn.download = filename;
+
+            if(currentItem) currentItem.classList.remove('active');
+            element.classList.add('active');
+            currentItem = element;
+        }
+
+        player.addEventListener('timeupdate', function() {
+            if (player.src && currentItem) {
+                let currentFilename = player.src.split('/').pop();
+                let data = {
+                    filename: currentFilename,
+                    chapterName: currentItem.querySelector('span').innerText.replace('▶ ', ''),
+                    currentTime: player.currentTime,
+                    duration: player.duration || 0
+                };
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify(data));
+                } catch (e) {}
+            }
+        });
+
+        player.addEventListener('ended', function() {
+            if(currentItem && currentItem.nextElementSibling) {
+                let nextEl = currentItem.nextElementSibling;
+                let onclickStr = nextEl.getAttribute('onclick');
+                let match = onclickStr.match(/'([^']+)'/);
+                if(match && match[1]) {
+                    chonVaPhatChuong(match[1], nextEl);
+                }
+            }
+        });
+
+        function chapNhanTiepTuc() {
+            document.getElementById('resume-popup').style.display = 'none';
+            if (pendingFilename) {
+                const items = document.querySelectorAll('.chapter-item');
+                let targetEl = null;
+                items.forEach(item => {
+                    if (item.getAttribute('onclick').includes(pendingFilename)) {
+                        targetEl = item;
+                    }
+                });
+                if (targetEl) {
+                    playAudioDirect(pendingFilename, targetEl, pendingTime);
+                    player.play().catch(e => console.log("Play blocked:", e));
+                }
+            }
+        }
+
+        function dongPopup() {
+            document.getElementById('resume-popup').style.display = 'none';
+            const firstChapter = document.querySelector('.chapter-item');
+            if (firstChapter && (!currentItem)) {
+                let match = firstChapter.getAttribute('onclick').match(/'([^']+)'/);
+                if (match && match[1]) {
+                    playAudioDirect(match[1], firstChapter, 0);
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            if (savedData.filename && savedData.currentTime > 5) {
+                const popup = document.getElementById('resume-popup');
+                document.getElementById('popup-chapter-name').innerText = savedData.chapterName || savedData.filename;
+
+                player.src = "/audio/{{ thu_muc }}/" + savedData.filename;
+                player.onloadedmetadata = function() {
+                    let curFormatted = formatTime(savedData.currentTime);
+                    let durFormatted = formatTime(player.duration);
+                    document.getElementById('popup-time-text').innerText = `${curFormatted} / ${durFormatted}`;
+                };
+
+                popup.style.display = 'flex';
+            } else {
+                dongPopup();
+            }
+        });
+
+        function tua(giay) { player.currentTime += giay; }
+
+        let speeds = [1.0, 1.25, 1.5, 1.8, 2.0];
+        let speedIdx = 0;
+        function doiTocTop() {
+            speedIdx = (speedIdx + 1) % speeds.length;
+            player.playbackRate = speeds[speedIdx];
+            document.getElementById('speedLabel').innerText = speeds[speedIdx] + 'x';
+        }
+        function doiTocDo() { doiTocTop(); }
+
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            document.querySelectorAll('.panel-box').forEach(p => {
+                if(p.id !== panelId) p.classList.remove('show');
+            });
+            panel.classList.toggle('show');
+        }
+
+        function nhayDenThoiDiem() {
+            const h = parseInt(document.getElementById('jumpHour').value) || 0;
+            const m = parseInt(document.getElementById('jumpMin').value) || 0;
+            const s = parseInt(document.getElementById('jumpSec').value) || 0;
+            player.currentTime = (h * 3600) + (m * 60) + s;
+            document.getElementById('jumpPanel').classList.remove('show');
+        }
+
+        function batDauHenGio() {
+            const minutes = parseInt(document.getElementById('timerSelect').value);
+            const statusEl = document.getElementById('timerStatus');
+            if(timerInterval) clearInterval(timerInterval);
+            if(minutes === 0) { statusEl.innerText = "Đã tắt hẹn giờ."; return; }
+            let timeLeft = minutes * 60;
+            statusEl.innerText = `Sẽ tắt nhạc sau ${minutes} phút nữa.`;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                let m = Math.floor(timeLeft / 60);
+                let s = timeLeft % 60;
+                statusEl.innerText = `Còn lại: ${m}p ${s}s`;
+                if(timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    player.pause();
+                    statusEl.innerText = "Đã tự động tắt nhạc!";
+                }
+            }, 1000);
+        }
+
+        function scrollToTags() {
+            const tagsFooter = document.querySelector('.story-tags-footer');
+            if(tagsFooter) tagsFooter.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function locDanhSachChuong() {
+            const keyword = document.getElementById('searchChapter').value.toLowerCase();
+            document.querySelectorAll('.chapter-item').forEach(item => {
+                const name = item.getAttribute('data-name').toLowerCase();
+                item.style.display = name.includes(keyword) ? 'flex' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>
