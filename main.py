@@ -9,10 +9,16 @@ from fastapi.templating import Jinja2Templates
 import uvicorn
 
 app = FastAPI()
-app.mount("/audio", StaticFiles(directory="audio"), name="audio")
-templates = Jinja2Templates(directory="templates")
 
+# Mount thư mục audio local để load ảnh bìa cover, intro, tags nếu có trên máy
+if os.path.exists("audio"):
+    app.mount("/audio", StaticFiles(directory="audio"), name="audio")
+
+templates = Jinja2Templates(directory="templates")
 STAT_FILE = "hot_stats.json"
+
+# ---> ĐƯỜNG DẪN GỐC TERABOX CỦA BẠN (Thay đổi link này nếu cần)
+TERABOX_BASE_URL = "https://dm.terabox.com/vietnamese/main?category=all&path=%2Fweb-truyenaudio"
 
 def doc_thong_ke():
     if os.path.exists(STAT_FILE):
@@ -27,13 +33,9 @@ def ghi_thong_ke(data):
     with open(STAT_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
-def sap_xep_tu_nhien(text):
-    return [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', text)]
-
 def lay_danh_sach_hot():
     stats = doc_thong_ke()
     danh_sach = []
-
     if os.path.exists("audio"):
         for ten_thu_muc in os.listdir("audio"):
             duong_dan_thu_muc = os.path.join("audio", ten_thu_muc)
@@ -43,10 +45,8 @@ def lay_danh_sach_hot():
                     if ten_file.lower().startswith("cover"):
                         anh_bia_path = f"/audio/{quote(ten_thu_muc)}/{quote(ten_file)}"
                         break
-
                 ten_sach = ten_thu_muc.split("#")[0].strip()
                 so_luot_xem = stats.get(ten_thu_muc, 0)
-
                 danh_sach.append({
                     "thu_muc": ten_sach,
                     "thu_muc_raw": ten_thu_muc,
@@ -54,7 +54,6 @@ def lay_danh_sach_hot():
                     "anh_bia": anh_bia_path,
                     "luot_xem": so_luot_xem
                 })
-
     danh_sach.sort(key=lambda x: x["luot_xem"], reverse=True)
     return danh_sach
 
@@ -63,7 +62,6 @@ async def ghi_nhan_xem(thu_muc: str):
     stats = doc_thong_ke()
     stats[thu_muc] = stats.get(thu_muc, 0) + 1
     ghi_thong_ke(stats)
-
     ten_goc = thu_muc.split("#")[0].strip()
     return RedirectResponse(url=f"/nghe/{ten_goc}", status_code=303)
 
@@ -71,18 +69,15 @@ async def ghi_nhan_xem(thu_muc: str):
 async def trang_chu(request: Request):
     danh_sach_truyen = []
     tat_ca_tags = set()
-
     for t_mac_dinh in ["#hoàn thành", "#đang ra", "#truyện ngắn", "#truyện dài"]:
         tat_ca_tags.add(t_mac_dinh)
 
     if os.path.exists("audio"):
         for ten_thu_muc in os.listdir("audio"):
             duong_dan_thu_muc = os.path.join("audio", ten_thu_muc)
-
             if os.path.isdir(duong_dan_thu_muc):
                 anh_bia_path = None
                 tags_list = []
-
                 for ten_file in os.listdir(duong_dan_thu_muc):
                     if ten_file.lower().startswith("cover"):
                         anh_bia_path = f"/audio/{quote(ten_thu_muc)}/{quote(ten_file)}"
@@ -96,7 +91,6 @@ async def trang_chu(request: Request):
                                         tat_ca_tags.add(tag_chuan)
                         except:
                             pass
-
                 if "#" in ten_thu_muc:
                     parts = ten_thu_muc.split("#")
                     ten_sach = parts[0].strip()
@@ -130,7 +124,6 @@ async def trang_chu(request: Request):
 @app.get("/nghe/{ten_truyen_url}", response_class=HTMLResponse)
 async def nghe_truyen(request: Request, ten_truyen_url: str):
     thu_muc_that = None
-
     if os.path.exists("audio"):
         for ten in os.listdir("audio"):
             if os.path.isdir(os.path.join("audio", ten)):
@@ -143,14 +136,30 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
         return HTMLResponse("Không tìm thấy thư mục truyện!", status_code=404)
 
     duong_dan = os.path.join("audio", thu_muc_that)
-    files = [f for f in os.listdir(duong_dan) if f.endswith('.mp3')]
-    files.sort(key=sap_xep_tu_nhien)
-
     ten_sach = thu_muc_that.split("#")[0].strip()
+
+    # Đọc tổng số chương từ file chapters.txt trong thư mục truyện
+    tong_so_chuong = 0
+    chapters_file_path = os.path.join(duong_dan, "chapters.txt")
+    if os.path.exists(chapters_file_path):
+        try:
+            with open(chapters_file_path, "r", encoding="utf-8") as f:
+                tong_so_chuong = int(f.read().strip())
+        except:
+            tong_so_chuong = 0
+
+    # Tự động sinh danh sách link audio với định dạng chuong-001.mp3, chuong-002.mp3...
+    danh_sach_chuong_url = []
+    for i in range(1, tong_so_chuong + 1):
+        file_name = f"chuong-{i:03d}.mp3"
+        audio_link = f"{TERABOX_BASE_URL}/{quote(thu_muc_that)}/{file_name}"
+        danh_sach_chuong_url.append({
+            "ten_chuong": f"Chương {i}",
+            "link": audio_link
+        })
 
     tags_list = []
     gioi_thieu_noi_dung = "Chưa có phần giới thiệu cho bộ truyện này."
-
     for ten_file in os.listdir(duong_dan):
         if ten_file.lower() == "tags.txt":
             try:
@@ -169,7 +178,6 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
     if "#" in thu_muc_that:
         for t in thu_muc_that.split("#")[1:]:
             if t.strip(): tags_list.append("#" + t.strip().lower())
-
     if not tags_list: tags_list = ["#sắc hiệp", "#audio"]
 
     return templates.TemplateResponse(
@@ -178,7 +186,7 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
         context={
             "ten_truyen": ten_sach.replace('-', ' ').title(),
             "thu_muc": quote(thu_muc_that),
-            "danh_sach_chuong": files,
+            "danh_sach_chuong": danh_sach_chuong_url,
             "story_tags": sorted(list(set(tags_list))),
             "hot_list": lay_danh_sach_hot(),
             "gioi_thieu": gioi_thieu_noi_dung
