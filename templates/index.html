@@ -330,7 +330,8 @@
                 <a href="#">📞 CONTACT</a>
             </div>
             <div class="story-header-box">
-                <img src="/audio/{{ thu_muc }}/cover.jpg" alt="Bìa truyện" class="cover-img story-cover" onerror="this.src='https://via.placeholder.com/130x170?text=No+Cover'">
+                <!-- Đã cập nhật src thành biến {{ anh_bia }} để đồng bộ với trang chủ -->
+                <img src="{{ anh_bia }}" alt="Bìa truyện" class="cover-img story-cover" onerror="this.src='https://via.placeholder.com/130x170?text=No+Cover'">
                 <div class="story-meta">
                     <h1>{{ ten_truyen }}</h1>
                     <p>🎧 Kho audio chất lượng cao. Tổng số: <strong>{{ danh_sach_chuong | length }} tập</strong></p>
@@ -389,7 +390,7 @@
                             <span style="font-size: 11px; color: var(--text-muted);">Internet Archive</span>
                         </div>
                         {% endfor %}
-                  </div>
+                </div>
                 <div style="margin-top: 15px;">
                     <a href="#" id="downloadBtn" class="btn-download-vip" download>⬇ TẢI FILE MP3 TẬP NÀY</a>
                 </div>
@@ -421,7 +422,6 @@
             </div>
         </div>
     </div>
-
     <div id="resume-popup">
         <div class="popup-icon">🎧</div>
         <div class="popup-info">
@@ -433,7 +433,6 @@
         <button class="popup-btn-skip" onclick="dongPopup()">Bỏ qua</button>
         <button class="popup-close" onclick="dongPopup()">✕</button>
     </div>
-
     <script>
         const player = document.getElementById('audio-player');
         const titleDisplay = document.getElementById('current-title');
@@ -447,7 +446,6 @@
         } catch (e) {
             savedData = {};
         }
-
         function formatTime(seconds) {
             let m = Math.floor(seconds / 60);
             let s = Math.floor(seconds % 60);
@@ -458,26 +456,21 @@
             }
             return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
         }
-
         let pendingLink = savedData.link || null;
         let pendingChapterName = savedData.chapterName || null;
         let pendingTime = savedData.currentTime || 0;
-
         function chonVaPhatChuongTeraBox(audioUrl, chapterName, element) {
             player.src = audioUrl;
             player.currentTime = 0;
             player.play().catch(e => console.log("Auto-play blocked:", e));
-
             titleDisplay.innerText = "Đang phát: " + chapterName;
             downloadBtn.href = audioUrl;
             downloadBtn.download = chapterName + ".mp3";
-
             if(currentItem) currentItem.classList.remove('active');
             element.classList.add('active');
             currentItem = element;
             dongPopup();
         }
-
         player.addEventListener('timeupdate', function() {
             if (player.src && currentItem) {
                 let chapterName = currentItem.querySelector('span').innerText.replace('▶ ', '');
@@ -492,19 +485,16 @@
                 } catch (e) {}
             }
         });
-
         player.addEventListener('ended', function() {
             if(currentItem && currentItem.nextElementSibling) {
                 let nextEl = currentItem.nextElementSibling;
                 let onclickStr = nextEl.getAttribute('onclick');
-                // Tự động gọi tiếp chương sau khớp với hàm TeraBox
                 let match = onclickStr.match(/chonVaPhatChuongTeraBox\('(.*?)',\s*'(.*?)'/);
                 if(match && match[1] && match[2]) {
                     chonVaPhatChuongTeraBox(match[1], match[2], nextEl);
                 }
             }
         });
-
         function chapNhanTiepTuc() {
             document.getElementById('resume-popup').style.display = 'none';
             if (pendingLink) {
@@ -525,7 +515,6 @@
                 }
             }
         }
-
         function dongPopup() {
             document.getElementById('resume-popup').style.display = 'none';
             const firstChapter = document.querySelector('.chapter-item');
@@ -536,7 +525,6 @@
                 }
             }
         }
-
         document.addEventListener("DOMContentLoaded", function() {
             if (savedData.link && savedData.currentTime > 5) {
                 const popup = document.getElementById('resume-popup');
@@ -552,7 +540,6 @@
                 dongPopup();
             }
         });
-
         function tua(giay) { player.currentTime += giay; }
         let speeds = [1.0, 1.25, 1.5, 1.8, 2.0];
         let speedIdx = 0;
@@ -561,7 +548,6 @@
             player.playbackRate = speeds[speedIdx];
             document.getElementById('speedLabel').innerText = speeds[speedIdx] + 'x';
         }
-
         function togglePanel(panelId) {
             const panel = document.getElementById(panelId);
             document.querySelectorAll('.panel-box').forEach(p => {
@@ -569,7 +555,6 @@
             });
             panel.classList.toggle('show');
         }
-
         function nhayDenThoiDiem() {
             const h = parseInt(document.getElementById('jumpHour').value) || 0;
             const m = parseInt(document.getElementById('jumpMin').value) || 0;
@@ -577,7 +562,6 @@
             player.currentTime = (h * 3600) + (m * 60) + s;
             document.getElementById('jumpPanel').classList.remove('show');
         }
-
         function batDauHenGio() {
             const minutes = parseInt(document.getElementById('timerSelect').value);
             const statusEl = document.getElementById('timerStatus');
@@ -597,12 +581,10 @@
                 }
             }, 1000);
         }
-
         function scrollToTags() {
             const tagsFooter = document.querySelector('.story-tags-footer');
             if(tagsFooter) tagsFooter.scrollIntoView({ behavior: 'smooth' });
         }
-
         function locDanhSachChuong() {
             const keyword = document.getElementById('searchChapter').value.toLowerCase();
             document.querySelectorAll('.chapter-item').forEach(item => {

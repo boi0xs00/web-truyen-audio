@@ -216,6 +216,7 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
         context={
             "ten_truyen": ten_sach.replace('-', ' ').title(),
             "thu_muc": quote(thu_muc_that),
+            "anh_bia": tim_anh_bia(duong_dan, thu_muc_that),
             "danh_sach_chuong": danh_sach_chuong_url,
             "story_tags": sorted(list(set(tags_list))),
             "hot_list": lay_danh_sach_hot(),
