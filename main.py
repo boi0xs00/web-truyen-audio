@@ -30,16 +30,23 @@ def ghi_thong_ke(data):
     with open(STAT_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
+# Hàm tìm file ảnh bìa hỗ trợ nhiều định dạng (.jpg, .jpeg, .png, .webp)
+def tim_anh_bia(duong_dan_thu_muc, thu_muc_raw):
+    cac_dinh_dang = ["cover.jpg", "cover.jpeg", "cover.png", "cover.webp", "Cover.jpg", "Cover.png"]
+    for ten_file in cac_dinh_dang:
+        if os.path.exists(os.path.join(duong_dan_thu_muc, ten_file)):
+            return f"/audio/{quote(thu_muc_raw)}/{ten_file}"
+    return None
+
 def lay_danh_sach_hot():
     stats = doc_thong_ke()
     sorted_stats = sorted(stats.items(), key=lambda x: x[1], reverse=True)[:5]
     hot_list = []
     for thu_muc_raw, luot_xem in sorted_stats:
         ten_hien_thi = thu_muc_raw.split("#")[0].strip().replace('-', ' ').title()
-        anh_bia = None
-        cover_path = os.path.join("audio", thu_muc_raw, "cover.jpg")
-        if os.path.exists(cover_path):
-            anh_bia = f"/audio/{quote(thu_muc_raw)}/cover.jpg"
+        duong_dan_thu_muc = os.path.join("audio", thu_muc_raw)
+        anh_bia = tim_anh_bia(duong_dan_thu_muc, thu_muc_raw)
+
         hot_list.append({
             "thu_muc_raw": thu_muc_raw,
             "ten_hien_thi": ten_hien_thi,
@@ -48,13 +55,11 @@ def lay_danh_sach_hot():
         })
     return hot_list
 
-# Hàm thông minh trích xuất Identifier từ Link hoặc tên trực tiếp mà bạn dán vào chapters.txt
 def lay_archive_identifier(raw_text, ten_sach_mac_dinh):
     raw_text = raw_text.strip()
     if not raw_text:
         return ten_sach_mac_dinh.lower().replace(' ', '-')
 
-    # Nếu người dùng dán cả đường link Archive vào (vd: https://archive.org/details/ten-truyen-moi)
     if "archive.org" in raw_text:
         try:
             path = urlparse(raw_text).path
@@ -68,7 +73,6 @@ def lay_archive_identifier(raw_text, ten_sach_mac_dinh):
         except:
             pass
 
-    # Nếu chỉ điền tên identifier hoặc slug đơn thuần
     return raw_text
 
 @app.get("/", response_class=HTMLResponse)
@@ -81,9 +85,7 @@ async def trang_chu(request: Request, tag: str = None):
             duong_dan = os.path.join("audio", ten)
             if os.path.isdir(duong_dan):
                 ten_sach = ten.split("#")[0].strip()
-                anh_bia = None
-                if os.path.exists(os.path.join(duong_dan, "cover.jpg")):
-                    anh_bia = f"/audio/{quote(ten)}/cover.jpg"
+                anh_bia = tim_anh_bia(duong_dan, ten)
 
                 tags = []
                 for ten_file in os.listdir(duong_dan):
@@ -146,7 +148,6 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
     duong_dan = os.path.join("audio", thu_muc_that)
     ten_sach = thu_muc_that.split("#")[0].strip()
 
-    # Đọc dòng đầu tiên từ chapters.txt của từng thư mục truyện riêng biệt
     raw_content = ""
     chapters_file_path = os.path.join(duong_dan, "chapters.txt")
     if os.path.exists(chapters_file_path):
@@ -158,10 +159,8 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
         except:
             pass
 
-    # Lấy đúng định danh Archive riêng cho bộ truyện này
     archive_identifier = lay_archive_identifier(raw_content, ten_sach)
 
-    # Gọi API Archive để quét danh sách file mp3 tương ứng của bộ truyện đó
     danh_sach_chuong_url = []
     try:
         api_url = f"https://archive.org/metadata/{archive_identifier}"
