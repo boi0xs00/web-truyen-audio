@@ -1,16 +1,15 @@
 import os
 import json
+import urllib.request
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 import uvicorn
 
-# 1. KHỞI TẠO APP FASTAPI (Phải đặt ở trên cùng)
 app = FastAPI()
 
-# 2. MOUNT THƯ MỤC VÀ TEMPLATES
 if os.path.exists("audio"):
     app.mount("/audio", StaticFiles(directory="audio"), name="audio")
 
@@ -49,6 +48,29 @@ def lay_danh_sach_hot():
         })
     return hot_list
 
+# Hàm thông minh trích xuất Identifier từ Link hoặc tên trực tiếp mà bạn dán vào chapters.txt
+def lay_archive_identifier(raw_text, ten_sach_mac_dinh):
+    raw_text = raw_text.strip()
+    if not raw_text:
+        return ten_sach_mac_dinh.lower().replace(' ', '-')
+
+    # Nếu người dùng dán cả đường link Archive vào (vd: https://archive.org/details/ten-truyen-moi)
+    if "archive.org" in raw_text:
+        try:
+            path = urlparse(raw_text).path
+            parts = [p for p in path.split('/') if p]
+            if "details" in parts or "download" in parts or "items" in parts:
+                idx = max(parts.index("details") if "details" in parts else -1,
+                          parts.index("download") if "download" in parts else -1,
+                          parts.index("items") if "items" in parts else -1)
+                if idx + 1 < len(parts):
+                    return parts[idx + 1]
+        except:
+            pass
+
+    # Nếu chỉ điền tên identifier hoặc slug đơn thuần
+    return raw_text
+
 @app.get("/", response_class=HTMLResponse)
 async def trang_chu(request: Request, tag: str = None):
     danh_sach_truyen = []
@@ -67,7 +89,7 @@ async def trang_chu(request: Request, tag: str = None):
                 for ten_file in os.listdir(duong_dan):
                     if ten_file.lower() == "tags.txt":
                         try:
-                            with open(os.path.join(duong_dan, ten_file), "r", encoding="utf-8") as f:
+                            with open(os.path.join(duong_dan, ten_file), "r", encoding="utf-8-sig") as f:
                                 for t in f.read().split("#"):
                                     if t.strip(): tags.append("#" + t.strip().lower())
                         except:
@@ -124,31 +146,47 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
     duong_dan = os.path.join("audio", thu_muc_that)
     ten_sach = thu_muc_that.split("#")[0].strip()
 
-    # Đọc identifier của Internet Archive từ file chapters.txt
-    archive_identifier = ""
-    tong_so_chuong = 0
+    # Đọc dòng đầu tiên từ chapters.txt của từng thư mục truyện riêng biệt
+    raw_content = ""
     chapters_file_path = os.path.join(duong_dan, "chapters.txt")
     if os.path.exists(chapters_file_path):
         try:
-            with open(chapters_file_path, "r", encoding="utf-8") as f:
+            with open(chapters_file_path, "r", encoding="utf-8-sig") as f:
                 lines = [line.strip() for line in f.readlines() if line.strip()]
                 if lines:
-                    archive_identifier = lines[0] # Dòng đầu là tên identifier trên Archive (vd: chuong-001)
-                    if len(lines) > 1:
-                        tong_so_chuong = int(lines[1])
-                    else:
-                        tong_so_chuong = 1
+                    raw_content = lines[0]
         except:
-            tong_so_chuong = 0
+            pass
 
-    # Tự động sinh danh sách link audio trỏ trực tiếp tới Internet Archive
+    # Lấy đúng định danh Archive riêng cho bộ truyện này
+    archive_identifier = lay_archive_identifier(raw_content, ten_sach)
+
+    # Gọi API Archive để quét danh sách file mp3 tương ứng của bộ truyện đó
     danh_sach_chuong_url = []
-    for i in range(1, tong_so_chuong + 1):
-        file_name = f"chương-{i:03d}.mp3"
-        audio_link = f"https://ia800000.us.archive.org/0/items/{archive_identifier}/{quote(file_name)}"
+    try:
+        api_url = f"https://archive.org/metadata/{archive_identifier}"
+        req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            files = data.get('files', [])
+
+            mp3_files = [f['name'] for f in files if f.get('name', '').lower().endswith('.mp3')]
+            mp3_files = sorted(mp3_files)
+
+            for file_name in mp3_files:
+                ten_hien_thi = file_name.replace('.mp3', '').replace('-', ' ').title()
+                audio_link = f"https://archive.org/download/{archive_identifier}/{quote(file_name)}"
+                danh_sach_chuong_url.append({
+                    "ten_chuong": ten_hien_thi,
+                    "link": audio_link
+                })
+    except Exception as e:
+        print(f"Lỗi lấy dữ liệu Archive cho truyện {archive_identifier}:", e)
+
+    if not danh_sach_chuong_url:
         danh_sach_chuong_url.append({
-            "ten_chuong": f"Chương {i}",
-            "link": audio_link
+            "ten_chuong": "Chương 1",
+            "link": f"https://archive.org/download/{archive_identifier}/chuong-001.mp3"
         })
 
     tags_list = []
@@ -156,14 +194,14 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
     for ten_file in os.listdir(duong_dan):
         if ten_file.lower() == "tags.txt":
             try:
-                with open(os.path.join(duong_dan, ten_file), "r", encoding="utf-8") as f:
+                with open(os.path.join(duong_dan, ten_file), "r", encoding="utf-8-sig") as f:
                     for t in f.read().lower().split("#"):
                         if t.strip(): tags_list.append("#" + t.strip())
             except:
                 pass
         elif ten_file.lower() == "intro.txt":
             try:
-                with open(os.path.join(duong_dan, ten_file), "r", encoding="utf-8") as f:
+                with open(os.path.join(duong_dan, ten_file), "r", encoding="utf-8-sig") as f:
                     gioi_thieu_noi_dung = f.read()
             except:
                 pass

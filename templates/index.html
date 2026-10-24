@@ -383,13 +383,13 @@
                     <button class="btn-control" onclick="tua(30)">+30s ⏩</button>
                 </div>
                 <div class="playlist" id="playlist">
-                    {% for chap in danh_sach_chuong %}
+                        {% for chap in danh_sach_chuong %}
                         <div class="chapter-item" data-name="{{ chap.ten_chuong }}" onclick="chonVaPhatChuongTeraBox('{{ chap.link }}', '{{ chap.ten_chuong }}', this)">
                             <span>▶ {{ chap.ten_chuong }}</span>
-                            <span style="font-size: 11px; color: var(--text-muted);">TeraBox Cloud</span>
+                            <span style="font-size: 11px; color: var(--text-muted);">Internet Archive</span>
                         </div>
-                    {% endfor %}
-                </div>
+                        {% endfor %}
+                  </div>
                 <div style="margin-top: 15px;">
                     <a href="#" id="downloadBtn" class="btn-download-vip" download>⬇ TẢI FILE MP3 TẬP NÀY</a>
                 </div>
