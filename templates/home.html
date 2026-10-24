@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trang Chủ - Nghe Truyện Online</title>
+
+    <!-- Tiêu đề trang chủ chuẩn SEO với từ khóa trọng tâm -->
+    <title>Nghe Truyện Sắc Audio - Kho Truyện Sắc Hiệp, Ngôn Tình Chọn Lọc</title>
+
+    <!-- Mô tả chuẩn SEO giúp Google lập chỉ mục và hiển thị cho người lạ tìm kiếm -->
+    <meta name="description" content="Website nghe truyện sắc audio, truyện sắc hiệp, ngôn tình và đô thị chọn lọc chất lượng cao. Phát trực tuyến mượt mà từ đám mây, cập nhật liên tục các bộ truyện hay nhất không quảng cáo.">
+
     <style>
         :root {
             --bg-outer: #141417;
@@ -160,7 +166,6 @@
         .story-name { color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; margin-bottom: 8px; display: block; }
         .card-tags { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; }
         .mini-tag { background-color: #141417; color: var(--accent-yellow); font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 1px solid #333; }
-
         .sidebar-right {
             width: 310px;
             background-color: var(--bg-sidebar);
@@ -236,33 +241,28 @@
                 {% endfor %}
             </ul>
         </div>
-
         <div class="main-area">
             <div class="top-bar">
                 <a href="/">🏠 HOME</a>
                 <a href="#">📄 ABOUT</a>
                 <a href="#">📞 CONTACT</a>
             </div>
-
             <div class="search-box">
                 <span class="search-icon">🔍</span>
                 <input type="text" id="searchInput" placeholder="Nhập tên truyện hoặc #tag cần tìm..." onkeyup="locTruyen()">
                 <span class="clear-btn" onclick="xoaTimKiem()">✕</span>
             </div>
-
             <div class="tags-wrapper">
                 <span class="tag-item active" onclick="locTheoTag('all', this)">Tất cả</span>
                 {% for tag in danh_sach_tags %}
                     <span class="tag-item" onclick="locTheoTag('{{ tag }}', this)">{{ tag }}</span>
                 {% endfor %}
             </div>
-
             <div class="section-box">
                 <div class="section-header">
                     <div class="section-title" id="sectionTitle">🎲 Tất cả truyện</div>
                     <button class="btn-doi" onclick="xaoTronTruyen()">🔄 Đổi</button>
                 </div>
-
                 <div class="grid-truyen" id="storyGrid">
                     {% for truyen in danh_sach_truyen %}
                         <div class="card-truyen" data-tags="{{ truyen.tags_str }}" onclick="window.location.href='/ghi-nhan/{{ truyen.thu_muc_raw }}'">
@@ -271,7 +271,6 @@
                             {% else %}
                                 <div class="cover-img">Chưa có ảnh bìa</div>
                             {% endif %}
-
                             <div class="card-info">
                                 <span class="story-name">{{ truyen.ten_hien_thi }}</span>
                                 {% if truyen.tags %}
@@ -287,7 +286,6 @@
                 </div>
             </div>
         </div>
-
         <div class="sidebar-right">
             <div class="top-tuan-title">🔥 HOT</div>
             <div class="top-list">
@@ -308,7 +306,6 @@
             </div>
         </div>
     </div>
-
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -322,16 +319,13 @@
                 });
             }
         });
-
         function locTheoTag(tagCanTim, element) {
             document.querySelectorAll('.tag-item, .nav-item').forEach(el => el.classList.remove('active'));
             if (element) element.classList.add('active');
-
             const titleEl = document.getElementById('sectionTitle');
             if (titleEl) {
                 titleEl.innerText = tagCanTim === 'all' ? '🎲 Tất cả truyện' : '🏷️ Truyện có tag: ' + tagCanTim;
             }
-
             const cards = document.querySelectorAll('.card-truyen');
             cards.forEach(card => {
                 const tagsCuaTruyen = card.getAttribute('data-tags') || '';
@@ -342,15 +336,12 @@
                 }
             });
         }
-
         function locTruyen() {
             const input = document.getElementById('searchInput').value.toLowerCase();
             const cards = document.querySelectorAll('.card-truyen');
-
             cards.forEach(card => {
                 const title = card.querySelector('.story-name').innerText.toLowerCase();
                 const tags = card.getAttribute('data-tags').toLowerCase();
-
                 if (title.includes(input) || tags.includes(input)) {
                     card.style.display = 'flex';
                 } else {
@@ -358,13 +349,11 @@
                 }
             });
         }
-
         function xoaTimKiem() {
             document.getElementById('searchInput').value = '';
             const firstTag = document.querySelector('.tag-item');
             if (firstTag) locTheoTag('all', firstTag);
         }
-
         function xaoTronTruyen() {
             const grid = document.getElementById('storyGrid');
             if (!grid) return;

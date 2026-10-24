@@ -3,7 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ ten_truyen }} - Nghe Truyện Online</title>
+
+    <!-- Tiêu đề động chuẩn SEO cho từng bộ truyện -->
+    <title>Nghe Audio {{ ten_truyen }} - Truyện Sắc Audio, Sắc Hiệp Hay Nhất</title>
+
+    <!-- Mô tả động tích hợp từ khóa trọng tâm cho từng trang chi tiết -->
+    <meta name="description" content="Thưởng thức trọn bộ audio truyện sắc hiệp {{ ten_truyen }}. Nghe trực tuyến chất lượng cao, phát từ đám mây, hỗ trợ hẹn giờ, lưu tiến trình nghe và tải file mp3 miễn phí.">
+
     <style>
         :root {
             --bg-outer: #141417;
@@ -330,7 +336,6 @@
                 <a href="#">📞 CONTACT</a>
             </div>
             <div class="story-header-box">
-                <!-- Đã cập nhật src thành biến {{ anh_bia }} để đồng bộ với trang chủ -->
                 <img src="{{ anh_bia }}" alt="Bìa truyện" class="cover-img story-cover" onerror="this.src='https://via.placeholder.com/130x170?text=No+Cover'">
                 <div class="story-meta">
                     <h1>{{ ten_truyen }}</h1>
