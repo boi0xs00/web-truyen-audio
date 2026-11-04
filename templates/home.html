@@ -3,13 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Tiêu đề trang chủ chuẩn SEO với từ khóa trọng tâm -->
     <title>Nghe Truyện Sắc Audio - Kho Truyện Sắc Hiệp, Ngôn Tình Chọn Lọc</title>
-
-    <!-- Mô tả chuẩn SEO giúp Google lập chỉ mục và hiển thị cho người lạ tìm kiếm -->
     <meta name="description" content="Website nghe truyện sắc audio, truyện sắc hiệp, ngôn tình và đô thị chọn lọc chất lượng cao. Phát trực tuyến mượt mà từ đám mây, cập nhật liên tục các bộ truyện hay nhất không quảng cáo.">
-
     <style>
         :root {
             --bg-outer: #141417;
@@ -102,7 +97,7 @@
         .search-box input:focus { border-color: var(--accent-yellow); }
         .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
         .clear-btn { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); cursor: pointer; }
-        .tags-wrapper { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 30px; }
+        .tags-wrapper { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; }
         .tag-item {
             background-color: var(--bg-tag);
             color: #d1d5db;
@@ -119,6 +114,99 @@
             border-color: var(--accent-yellow);
             font-weight: 600;
         }
+
+        /* KHỐI LỊCH SỬ NGHE */
+        .history-box {
+            background-color: #16171d;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 25px;
+        }
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 15px;
+        }
+        .history-title {
+            color: var(--accent-yellow);
+            font-size: 15px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-clear-history {
+            background: transparent;
+            border: 1px solid #3e4050;
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-clear-history:hover {
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+        .history-grid {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+        .history-grid::-webkit-scrollbar { height: 6px; }
+        .history-grid::-webkit-scrollbar-track { background: #131419; border-radius: 4px; }
+        .history-grid::-webkit-scrollbar-thumb { background: #2d2e3a; border-radius: 4px; }
+        .history-card {
+            min-width: 130px;
+            max-width: 130px;
+            flex-shrink: 0;
+            background-color: var(--bg-element);
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #2e303e;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+            text-decoration: none;
+            display: block;
+        }
+        .history-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent-yellow);
+        }
+        .history-thumb {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            background-color: #1e1f29;
+            display: block;
+        }
+        .history-info { padding: 8px; }
+        .history-name {
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 600;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4;
+            height: 34px;
+            margin-bottom: 4px;
+        }
+        .history-chap {
+            color: var(--accent-yellow);
+            font-size: 11px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .section-box { background-color: #16171d; border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; }
         .section-header {
             display: flex;
@@ -258,6 +346,16 @@
                     <span class="tag-item" onclick="locTheoTag('{{ tag }}', this)">{{ tag }}</span>
                 {% endfor %}
             </div>
+
+            <!-- KHỐI LỊCH SỬ NGHE GẦN ĐÂY -->
+            <div class="history-box" id="historyBox" style="display: none;">
+                <div class="history-header">
+                    <div class="history-title">🎧 Nghe Gần Đây</div>
+                    <button class="btn-clear-history" onclick="xoaLichSu()">Xóa lịch sử</button>
+                </div>
+                <div class="history-grid" id="historyGrid"></div>
+            </div>
+
             <div class="section-box">
                 <div class="section-header">
                     <div class="section-title" id="sectionTitle">🎲 Tất cả truyện</div>
@@ -308,6 +406,8 @@
     </div>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            hienThiLichSu();
+
             const urlParams = new URLSearchParams(window.location.search);
             const tagParam = urlParams.get('tag');
             if (tagParam) {
@@ -319,6 +419,77 @@
                 });
             }
         });
+
+        function layTenChuan(raw) {
+            if (!raw) return "";
+            return raw.split("#")[0].trim().toLowerCase();
+        }
+
+        function hienThiLichSu() {
+            const rawData = localStorage.getItem('nghetruyen_history');
+            if (!rawData) return;
+
+            let historyList = [];
+            try {
+                historyList = JSON.parse(rawData);
+            } catch (e) {
+                return;
+            }
+
+            if (!Array.isArray(historyList) || historyList.length === 0) return;
+
+            // Tự động làm sạch các bản ghi trùng tên gốc, ưu tiên bản ghi có ảnh bìa
+            const uniqueMap = new Map();
+            for (const item of historyList) {
+                const baseName = layTenChuan(item.thu_muc_raw);
+                if (!uniqueMap.has(baseName)) {
+                    uniqueMap.set(baseName, item);
+                } else {
+                    const existing = uniqueMap.get(baseName);
+                    if (!existing.anh_bia && item.anh_bia) {
+                        existing.anh_bia = item.anh_bia;
+                        existing.thu_muc_raw = item.thu_muc_raw;
+                    }
+                }
+            }
+            historyList = Array.from(uniqueMap.values());
+            localStorage.setItem('nghetruyen_history', JSON.stringify(historyList));
+
+            const box = document.getElementById('historyBox');
+            const grid = document.getElementById('historyGrid');
+            grid.innerHTML = '';
+
+            historyList.forEach(item => {
+                const card = document.createElement('a');
+                card.className = 'history-card';
+                card.href = `/ghi-nhan/${encodeURIComponent(item.thu_muc_raw)}`;
+
+                const imgSrc = item.anh_bia ? item.anh_bia : '';
+                const imgHtml = imgSrc
+                    ? `<img src="${imgSrc}" class="history-thumb" alt="Thumb" onerror="this.style.display='none'">`
+                    : `<div class="history-thumb" style="display:flex;align-items:center;justify-content:center;color:#64748b;font-size:11px;">No cover</div>`;
+
+                card.innerHTML = `
+                    ${imgHtml}
+                    <div class="history-info">
+                        <div class="history-name" title="${item.ten_hien_thi}">${item.ten_hien_thi}</div>
+                        <div class="history-chap">${item.chuong_dang_nghe || 'Đang nghe'}</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            box.style.display = 'block';
+        }
+
+        function xoaLichSu() {
+            if (confirm("Bạn có chắc muốn xóa toàn bộ lịch sử nghe gần đây không?")) {
+                localStorage.removeItem('nghetruyen_history');
+                document.getElementById('historyBox').style.display = 'none';
+                document.getElementById('historyGrid').innerHTML = '';
+            }
+        }
+
         function locTheoTag(tagCanTim, element) {
             document.querySelectorAll('.tag-item, .nav-item').forEach(el => el.classList.remove('active'));
             if (element) element.classList.add('active');
@@ -336,6 +507,7 @@
                 }
             });
         }
+
         function locTruyen() {
             const input = document.getElementById('searchInput').value.toLowerCase();
             const cards = document.querySelectorAll('.card-truyen');
@@ -349,11 +521,13 @@
                 }
             });
         }
+
         function xoaTimKiem() {
             document.getElementById('searchInput').value = '';
             const firstTag = document.querySelector('.tag-item');
             if (firstTag) locTheoTag('all', firstTag);
         }
+
         function xaoTronTruyen() {
             const grid = document.getElementById('storyGrid');
             if (!grid) return;

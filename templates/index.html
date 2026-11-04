@@ -3,13 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Tiêu đề động chuẩn SEO cho từng bộ truyện -->
     <title>Nghe Audio {{ ten_truyen }} - Truyện Sắc Audio, Sắc Hiệp Hay Nhất</title>
-
-    <!-- Mô tả động tích hợp từ khóa trọng tâm cho từng trang chi tiết -->
     <meta name="description" content="Thưởng thức trọn bộ audio truyện sắc hiệp {{ ten_truyen }}. Nghe trực tuyến chất lượng cao, phát từ đám mây, hỗ trợ hẹn giờ, lưu tiến trình nghe và tải file mp3 miễn phí.">
-
     <style>
         :root {
             --bg-outer: #141417;
@@ -134,7 +129,7 @@
         .tool-btn:hover { background-color: #3f4152; color: #fff; }
         .panel-box { display: none; background-color: #181920; border: 1px solid #3f4152; border-radius: 8px; padding: 15px; margin-top: 12px; text-align: center; }
         .panel-box.show { display: block; }
-        .panel-inputs { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
+        .panel-inputs { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
         .panel-inputs input, .panel-inputs select {
             background-color: #131419;
             border: 1px solid #3f4152;
@@ -142,10 +137,9 @@
             padding: 6px 10px;
             border-radius: 4px;
             font-size: 13px;
-            width: 80px;
-            text-align: center;
             outline: none;
         }
+        .panel-inputs input[type="number"] { width: 85px; text-align: center; }
         .panel-inputs select { width: 150px; text-align: left; }
         .btn-action-panel { background-color: #3b82f6; color: white; border: none; padding: 6px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         .btn-action-panel:hover { background-color: #2563eb; }
@@ -192,7 +186,7 @@
         }
         .chapter-item:hover { background-color: var(--bg-element); color: #fff; }
         .chapter-item.active { background-color: #292524; color: var(--accent-yellow); font-weight: bold; border-left: 3px solid var(--accent-yellow); }
-        .story-tags-footer { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; align-items: center; }
+        .story-tags-footer { display: flex; gap: 8px; margin: 20px 0; flex-wrap: wrap; align-items: center; }
         .tag-label { color: var(--text-muted); font-size: 13px; }
         .badge-tag {
             background-color: var(--bg-tag);
@@ -204,6 +198,71 @@
             cursor: pointer;
         }
         .badge-tag:hover { background-color: #3f4152; color: var(--accent-yellow); }
+
+        /* KHỐI CÓ THỂ BẠN QUAN TÂM */
+        .related-box {
+            background-color: var(--bg-sidebar);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 25px;
+        }
+        .related-title {
+            color: var(--accent-yellow);
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--accent-yellow);
+            margin-bottom: 18px;
+        }
+        .related-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+        }
+        .related-card {
+            background-color: var(--bg-element);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #2e303e;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .related-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-yellow);
+        }
+        .related-thumb {
+            width: 100%;
+            aspect-ratio: 2 / 3;
+            object-fit: contain;
+            background-color: #121318;
+            display: block;
+        }
+        .related-card-info {
+            padding: 8px 10px;
+            text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .related-card-title {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4;
+        }
+
         .sidebar-right {
             width: 310px;
             background-color: var(--bg-sidebar);
@@ -264,6 +323,7 @@
         }
         .top-item:hover .top-name { color: var(--accent-yellow); }
         .top-date { color: var(--text-muted); font-size: 11px; }
+
         #resume-popup {
             display: none;
             position: fixed;
@@ -336,7 +396,7 @@
                 <a href="#">📞 CONTACT</a>
             </div>
             <div class="story-header-box">
-                <img src="{{ anh_bia }}" alt="Bìa truyện" class="cover-img story-cover" onerror="this.src='https://via.placeholder.com/130x170?text=No+Cover'">
+                <img src="{{ anh_bia if anh_bia else '' }}" alt="Bìa truyện" class="cover-img story-cover" onerror="this.src='https://via.placeholder.com/130x170?text=No+Cover'">
                 <div class="story-meta">
                     <h1>{{ ten_truyen }}</h1>
                     <p>🎧 Kho audio chất lượng cao. Tổng số: <strong>{{ danh_sach_chuong | length }} tập</strong></p>
@@ -368,15 +428,20 @@
                         </div>
                         <button class="btn-action-panel" onclick="nhayDenThoiDiem()">NHẢY</button>
                     </div>
+
+                    <!-- BẢNG HẸN GIỜ -->
                     <div id="timerPanel" class="panel-box">
                         <div class="panel-inputs">
-                            <select id="timerSelect">
+                            <select id="timerSelect" onchange="dongBoSelectSangInput()">
                                 <option value="0">Tắt hẹn giờ</option>
                                 <option value="5">Sau 5 phút</option>
                                 <option value="15">Sau 15 phút</option>
                                 <option value="30">Sau 30 phút</option>
                                 <option value="60">Sau 60 phút</option>
                             </select>
+                            <span style="color: var(--text-muted); font-size: 13px;">hoặc gõ:</span>
+                            <input type="number" id="customTimerMinutes" placeholder="Số phút" min="1" max="600">
+                            <span style="color: var(--text-muted); font-size: 13px;">phút</span>
                         </div>
                         <button class="btn-action-panel" onclick="batDauHenGio()">BẮT ĐẦU</button>
                         <div id="timerStatus" style="font-size: 12px; color: var(--accent-yellow); margin-top: 8px;"></div>
@@ -389,23 +454,46 @@
                     <button class="btn-control" onclick="tua(30)">+30s ⏩</button>
                 </div>
                 <div class="playlist" id="playlist">
-                        {% for chap in danh_sach_chuong %}
-                        <div class="chapter-item" data-name="{{ chap.ten_chuong }}" onclick="chonVaPhatChuongTeraBox('{{ chap.link }}', '{{ chap.ten_chuong }}', this)">
-                            <span>▶ {{ chap.ten_chuong }}</span>
-                            <span style="font-size: 11px; color: var(--text-muted);">Internet Archive</span>
-                        </div>
-                        {% endfor %}
+                    {% for chap in danh_sach_chuong %}
+                    <div class="chapter-item" data-name="{{ chap.ten_chuong }}" onclick="chonVaPhatChuongTeraBox('{{ chap.link }}', '{{ chap.ten_chuong }}', this)">
+                        <span>▶ {{ chap.ten_chuong }}</span>
+                        <span style="font-size: 11px; color: var(--text-muted);">Internet Archive</span>
+                    </div>
+                    {% endfor %}
                 </div>
                 <div style="margin-top: 15px;">
                     <a href="#" id="downloadBtn" class="btn-download-vip" download>⬇ TẢI FILE MP3 TẬP NÀY</a>
                 </div>
             </div>
+
             <div class="story-tags-footer">
                 <span class="tag-label">Tags:</span>
                 {% for tag in story_tags %}
                     <a href="/?tag={{ tag | urlencode }}" class="badge-tag">{{ tag }}</a>
                 {% endfor %}
             </div>
+
+            <!-- KHỐI CÓ THỂ BẠN QUAN TÂM -->
+            {% if truyen_lien_quan %}
+            <div class="related-box">
+                <div class="related-title">🔥 Có thể bạn quan tâm</div>
+                <div class="related-grid">
+                    {% for item in truyen_lien_quan %}
+                    <a href="/ghi-nhan/{{ item.thu_muc_raw }}" class="related-card">
+                        {% if item.anh_bia %}
+                            <img src="{{ item.anh_bia }}" class="related-thumb" alt="{{ item.ten_hien_thi }}">
+                        {% else %}
+                            <div class="related-thumb" style="display:flex;align-items:center;justify-content:center;color:#64748b;font-size:12px;">No cover</div>
+                        {% endif %}
+                        <div class="related-card-info">
+                            <div class="related-card-title">{{ item.ten_hien_thi }}</div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
         </div>
         <div class="sidebar-right">
             <div class="top-tuan-title">🔥 HOT</div>
@@ -444,13 +532,19 @@
         const downloadBtn = document.getElementById('downloadBtn');
         let currentItem = null;
         let timerInterval = null;
-        const storageKey = "audio_progress_v2_{{ thu_muc | urlencode }}";
+
+        const currentThuMuc = "{{ thu_muc }}";
+        const currentTenTruyen = "{{ ten_truyen }}";
+        const currentAnhBia = "{{ anh_bia if anh_bia else '' }}";
+
+        const storageKey = "audio_progress_v2_" + encodeURIComponent(currentThuMuc);
         let savedData = {};
         try {
             savedData = JSON.parse(localStorage.getItem(storageKey) || '{}');
         } catch (e) {
             savedData = {};
         }
+
         function formatTime(seconds) {
             let m = Math.floor(seconds / 60);
             let s = Math.floor(seconds % 60);
@@ -461,9 +555,40 @@
             }
             return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
         }
+
         let pendingLink = savedData.link || null;
         let pendingChapterName = savedData.chapterName || null;
         let pendingTime = savedData.currentTime || 0;
+
+        function layTenChuan(raw) {
+            if (!raw) return "";
+            return raw.split("#")[0].trim().toLowerCase();
+        }
+
+        function capNhatLichSuToanCuc(chapterName) {
+            try {
+                let history = JSON.parse(localStorage.getItem('nghetruyen_history') || '[]');
+                const currentBaseName = layTenChuan(currentThuMuc);
+
+                // Loại bỏ bất kỳ bản ghi nào trùng tên gốc với truyện đang phát
+                history = history.filter(item => layTenChuan(item.thu_muc_raw) !== currentBaseName);
+
+                // Đưa bản ghi cập nhật mới nhất (đã có đủ ảnh và thư mục hiện tại) lên đầu
+                history.unshift({
+                    thu_muc_raw: currentThuMuc,
+                    ten_hien_thi: currentTenTruyen,
+                    anh_bia: currentAnhBia,
+                    chuong_dang_nghe: chapterName,
+                    cap_nhat: new Date().toISOString()
+                });
+
+                if (history.length > 20) {
+                    history = history.slice(0, 20);
+                }
+                localStorage.setItem('nghetruyen_history', JSON.stringify(history));
+            } catch (e) {}
+        }
+
         function chonVaPhatChuongTeraBox(audioUrl, chapterName, element) {
             player.src = audioUrl;
             player.currentTime = 0;
@@ -471,11 +596,15 @@
             titleDisplay.innerText = "Đang phát: " + chapterName;
             downloadBtn.href = audioUrl;
             downloadBtn.download = chapterName + ".mp3";
-            if(currentItem) currentItem.classList.remove('active');
+
+            if (currentItem) currentItem.classList.remove('active');
             element.classList.add('active');
             currentItem = element;
+
+            capNhatLichSuToanCuc(chapterName);
             dongPopup();
         }
+
         player.addEventListener('timeupdate', function() {
             if (player.src && currentItem) {
                 let chapterName = currentItem.querySelector('span').innerText.replace('▶ ', '');
@@ -490,16 +619,18 @@
                 } catch (e) {}
             }
         });
+
         player.addEventListener('ended', function() {
-            if(currentItem && currentItem.nextElementSibling) {
+            if (currentItem && currentItem.nextElementSibling) {
                 let nextEl = currentItem.nextElementSibling;
                 let onclickStr = nextEl.getAttribute('onclick');
                 let match = onclickStr.match(/chonVaPhatChuongTeraBox\('(.*?)',\s*'(.*?)'/);
-                if(match && match[1] && match[2]) {
+                if (match && match[1] && match[2]) {
                     chonVaPhatChuongTeraBox(match[1], match[2], nextEl);
                 }
             }
         });
+
         function chapNhanTiepTuc() {
             document.getElementById('resume-popup').style.display = 'none';
             if (pendingLink) {
@@ -512,7 +643,7 @@
                 });
                 if (targetEl) {
                     let match = targetEl.getAttribute('onclick').match(/chonVaPhatChuongTeraBox\('(.*?)',\s*'(.*?)'/);
-                    if(match) {
+                    if (match) {
                         chonVaPhatChuongTeraBox(match[1], match[2], targetEl);
                         player.currentTime = pendingTime;
                         player.play().catch(e => console.log("Play blocked:", e));
@@ -520,6 +651,7 @@
                 }
             }
         }
+
         function dongPopup() {
             document.getElementById('resume-popup').style.display = 'none';
             const firstChapter = document.querySelector('.chapter-item');
@@ -530,6 +662,7 @@
                 }
             }
         }
+
         document.addEventListener("DOMContentLoaded", function() {
             if (savedData.link && savedData.currentTime > 5) {
                 const popup = document.getElementById('resume-popup');
@@ -545,7 +678,9 @@
                 dongPopup();
             }
         });
+
         function tua(giay) { player.currentTime += giay; }
+
         let speeds = [1.0, 1.25, 1.5, 1.8, 2.0];
         let speedIdx = 0;
         function doiTocDo() {
@@ -553,13 +688,15 @@
             player.playbackRate = speeds[speedIdx];
             document.getElementById('speedLabel').innerText = speeds[speedIdx] + 'x';
         }
+
         function togglePanel(panelId) {
             const panel = document.getElementById(panelId);
             document.querySelectorAll('.panel-box').forEach(p => {
-                if(p.id !== panelId) p.classList.remove('show');
+                if (p.id !== panelId) p.classList.remove('show');
             });
             panel.classList.toggle('show');
         }
+
         function nhayDenThoiDiem() {
             const h = parseInt(document.getElementById('jumpHour').value) || 0;
             const m = parseInt(document.getElementById('jumpMin').value) || 0;
@@ -567,11 +704,35 @@
             player.currentTime = (h * 3600) + (m * 60) + s;
             document.getElementById('jumpPanel').classList.remove('show');
         }
+
+        function dongBoSelectSangInput() {
+            const selectVal = parseInt(document.getElementById('timerSelect').value);
+            if (selectVal > 0) {
+                document.getElementById('customTimerMinutes').value = selectVal;
+            } else {
+                document.getElementById('customTimerMinutes').value = '';
+            }
+        }
+
         function batDauHenGio() {
-            const minutes = parseInt(document.getElementById('timerSelect').value);
+            const customVal = parseInt(document.getElementById('customTimerMinutes').value);
+            const selectVal = parseInt(document.getElementById('timerSelect').value);
+
+            let minutes = 0;
+            if (!isNaN(customVal) && customVal > 0) {
+                minutes = customVal;
+            } else if (!isNaN(selectVal)) {
+                minutes = selectVal;
+            }
+
             const statusEl = document.getElementById('timerStatus');
-            if(timerInterval) clearInterval(timerInterval);
-            if(minutes === 0) { statusEl.innerText = "Đã tắt hẹn giờ."; return; }
+            if (timerInterval) clearInterval(timerInterval);
+
+            if (minutes === 0) {
+                statusEl.innerText = "Đã tắt hẹn giờ.";
+                return;
+            }
+
             let timeLeft = minutes * 60;
             statusEl.innerText = `Sẽ tắt nhạc sau ${minutes} phút nữa.`;
             timerInterval = setInterval(() => {
@@ -579,17 +740,19 @@
                 let m = Math.floor(timeLeft / 60);
                 let s = timeLeft % 60;
                 statusEl.innerText = `Còn lại: ${m}p ${s}s`;
-                if(timeLeft <= 0) {
+                if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     player.pause();
                     statusEl.innerText = "Đã tự động tắt nhạc!";
                 }
             }, 1000);
         }
+
         function scrollToTags() {
             const tagsFooter = document.querySelector('.story-tags-footer');
-            if(tagsFooter) tagsFooter.scrollIntoView({ behavior: 'smooth' });
+            if (tagsFooter) tagsFooter.scrollIntoView({ behavior: 'smooth' });
         }
+
         function locDanhSachChuong() {
             const keyword = document.getElementById('searchChapter').value.toLowerCase();
             document.querySelectorAll('.chapter-item').forEach(item => {
