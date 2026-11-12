@@ -3,7 +3,7 @@ import json
 import random
 import urllib.request
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from urllib.parse import quote, urlparse
@@ -17,6 +17,7 @@ if os.path.exists("audio"):
 templates = Jinja2Templates(directory="templates")
 STAT_FILE = "hot_stats.json"
 
+
 def doc_thong_ke():
     if os.path.exists(STAT_FILE):
         try:
@@ -26,9 +27,11 @@ def doc_thong_ke():
             return {}
     return {}
 
+
 def ghi_thong_ke(data):
     with open(STAT_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
+
 
 def tim_anh_bia(duong_dan_thu_muc, thu_muc_raw):
     """Tìm ảnh bìa chính xác, nếu thư mục đổi tên sẽ quét fallback theo tên gốc"""
@@ -36,7 +39,6 @@ def tim_anh_bia(duong_dan_thu_muc, thu_muc_raw):
         "cover.jpg", "cover.jpeg", "cover.png", "cover.webp",
         "Cover.jpg", "Cover.jpeg", "Cover.png", "Cover.webp"
     ]
-
     # 1. Quét trực tiếp theo đường dẫn thư mục truyền vào
     if os.path.exists(duong_dan_thu_muc):
         for ten_file in cac_dinh_dang:
@@ -55,6 +57,7 @@ def tim_anh_bia(duong_dan_thu_muc, thu_muc_raw):
                         return f"/audio/{quote(folder_name)}/{ten_file}"
     return None
 
+
 def lay_danh_sach_hot():
     stats = doc_thong_ke()
     if not os.path.exists("audio"):
@@ -66,7 +69,6 @@ def lay_danh_sach_hot():
     # 1. Lọc bỏ các thư mục đã bị xóa và gom nhóm truyện trùng tên gốc (trước dấu #)
     aggregated_stats = {}
     cleaned_stats = {}
-
     for folder_key, views in stats.items():
         # Kiểm tra xem folder_key này có khớp với thư mục thực tế nào không
         matched_real_folder = None
@@ -110,8 +112,9 @@ def lay_danh_sach_hot():
             "luot_xem": item["views"],
             "anh_bia": anh_bia
         })
-
     return hot_list
+
+
 def lay_archive_identifier(raw_text, ten_sach_mac_dinh):
     raw_text = raw_text.strip()
     if not raw_text:
@@ -129,6 +132,7 @@ def lay_archive_identifier(raw_text, ten_sach_mac_dinh):
         except Exception:
             pass
     return raw_text
+
 
 def lay_tat_ca_truyen():
     """Hàm phụ trợ lấy danh sách truyện toàn bộ hệ thống phục vụ gợi ý liên quan"""
@@ -166,6 +170,7 @@ def lay_tat_ca_truyen():
             })
     return danh_sach
 
+
 @app.get("/", response_class=HTMLResponse)
 async def trang_chu(request: Request, tag: str = None):
     danh_sach_truyen = lay_tat_ca_truyen()
@@ -184,12 +189,34 @@ async def trang_chu(request: Request, tag: str = None):
         }
     )
 
+
 @app.get("/ghi-nhan/{thu_muc_raw}", response_class=HTMLResponse)
 async def ghi_nhan_luot_xem(thu_muc_raw: str):
     stats = doc_thong_ke()
     stats[thu_muc_raw] = stats.get(thu_muc_raw, 0) + 1
     ghi_thong_ke(stats)
     return RedirectResponse(url=f"/nghe/{quote(thu_muc_raw)}", status_code=303)
+
+
+@app.get("/api/archive-text/{identifier}/{filename:path}", response_class=PlainTextResponse)
+async def lay_noi_dung_text_archive(identifier: str, filename: str):
+    """Proxy tải nội dung file .txt từ Internet Archive về trình duyệt để đọc trực tiếp"""
+    url = f"https://archive.org/download/{quote(identifier)}/{quote(filename)}"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as response:
+            raw_bytes = response.read()
+            try:
+                text = raw_bytes.decode('utf-8-sig')
+            except UnicodeDecodeError:
+                text = raw_bytes.decode('utf-8', errors='replace')
+            return PlainTextResponse(content=text)
+    except Exception as e:
+        return PlainTextResponse(
+            content=f"Không thể tải nội dung văn bản từ Archive.org.\nChi tiết lỗi: {e}",
+            status_code=500
+        )
+
 
 @app.get("/nghe/{ten_truyen_url}", response_class=HTMLResponse)
 async def nghe_truyen(request: Request, ten_truyen_url: str):
@@ -219,20 +246,38 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
 
     archive_identifier = lay_archive_identifier(raw_content, ten_sach)
     danh_sach_chuong_url = []
+    danh_sach_text_url = []
+
     try:
         api_url = f"https://archive.org/metadata/{archive_identifier}"
         req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as response:
+        with urllib.request.urlopen(req, timeout=8) as response:
             data = json.loads(response.read().decode('utf-8'))
             files = data.get('files', [])
-            mp3_files = [f['name'] for f in files if f.get('name', '').lower().endswith('.mp3')]
-            mp3_files = sorted(mp3_files)
+
+            # 1. Lấy tất cả file MP3
+            mp3_files = sorted([f['name'] for f in files if f.get('name', '').lower().endswith('.mp3')])
             for file_name in mp3_files:
                 ten_hien_thi = file_name.replace('.mp3', '').replace('-', ' ').title()
                 audio_link = f"https://archive.org/download/{archive_identifier}/{quote(file_name)}"
                 danh_sach_chuong_url.append({
                     "ten_chuong": ten_hien_thi,
                     "link": audio_link
+                })
+
+            # 2. Lấy tất cả file TXT (loại bỏ các file hệ thống _djvu.txt của Archive)
+            txt_files = sorted([
+                f['name'] for f in files
+                if f.get('name', '').lower().endswith('.txt')
+                and not f.get('name', '').lower().endswith('_djvu.txt')
+            ])
+            for file_name in txt_files:
+                ten_hien_thi = file_name.replace('.txt', '').replace('-', ' ').title()
+                download_link = f"https://archive.org/download/{archive_identifier}/{quote(file_name)}"
+                danh_sach_text_url.append({
+                    "ten_file": ten_hien_thi,
+                    "file_goc": file_name,
+                    "download_link": download_link
                 })
     except Exception as e:
         print(f"Lỗi lấy dữ liệu Archive cho truyện {archive_identifier}:", e)
@@ -292,14 +337,17 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
         context={
             "ten_truyen": ten_sach.replace('-', ' ').title(),
             "thu_muc": thu_muc_that,
+            "archive_id": archive_identifier,
             "anh_bia": tim_anh_bia(duong_dan, thu_muc_that),
             "danh_sach_chuong": danh_sach_chuong_url,
+            "danh_sach_text": danh_sach_text_url,
             "story_tags": sorted(list(current_tags_set)),
             "hot_list": lay_danh_sach_hot(),
             "gioi_thieu": gioi_thieu_noi_dung,
             "truyen_lien_quan": truyen_lien_quan
         }
     )
+
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

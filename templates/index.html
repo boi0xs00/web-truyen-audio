@@ -186,6 +186,110 @@
         }
         .chapter-item:hover { background-color: var(--bg-element); color: #fff; }
         .chapter-item.active { background-color: #292524; color: var(--accent-yellow); font-weight: bold; border-left: 3px solid var(--accent-yellow); }
+
+        /* KHỐI VĂN BẢN (TRUYỆN CHỮ TỪ ARCHIVE) */
+        .text-files-box {
+            background-color: var(--bg-sidebar);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .text-files-title {
+            color: var(--accent-yellow);
+            font-size: 15px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .text-file-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #131419;
+            padding: 12px 15px;
+            border-radius: 6px;
+            border: 1px solid #2e303e;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .text-file-name {
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .text-file-actions { display: flex; gap: 8px; }
+        .btn-read-txt {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 5px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-read-txt:hover { background-color: #2563eb; }
+        .btn-dl-txt {
+            background-color: #252630;
+            color: #cbd5e1;
+            border: 1px solid #3f4152;
+            padding: 7px 14px;
+            border-radius: 5px;
+            font-size: 12.5px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .btn-dl-txt:hover { background-color: #3f4152; color: #fff; }
+        .reader-container {
+            display: none;
+            background-color: #111216;
+            border: 1px solid #3f4152;
+            border-radius: 8px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+        .reader-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #1c1d24;
+            padding: 10px 15px;
+            border-bottom: 1px solid #2e303e;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .reader-controls { display: flex; gap: 8px; align-items: center; }
+        .reader-btn {
+            background-color: #2d2e3a;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12.5px;
+            font-weight: bold;
+        }
+        .reader-btn:hover { background-color: #434556; }
+        .reader-content {
+            padding: 25px;
+            max-height: 550px;
+            overflow-y: auto;
+            color: #d1d5db;
+            font-size: 17px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            font-family: Georgia, 'Times New Roman', Times, serif;
+        }
+        .reader-content::-webkit-scrollbar { width: 8px; }
+        .reader-content::-webkit-scrollbar-thumb { background: #3f4152; border-radius: 4px; }
+
         .story-tags-footer { display: flex; gap: 8px; margin: 20px 0; flex-wrap: wrap; align-items: center; }
         .tag-label { color: var(--text-muted); font-size: 13px; }
         .badge-tag {
@@ -262,7 +366,6 @@
             overflow: hidden;
             line-height: 1.4;
         }
-
         .sidebar-right {
             width: 310px;
             background-color: var(--bg-sidebar);
@@ -323,7 +426,6 @@
         }
         .top-item:hover .top-name { color: var(--accent-yellow); }
         .top-date { color: var(--text-muted); font-size: 11px; }
-
         #resume-popup {
             display: none;
             position: fixed;
@@ -428,7 +530,6 @@
                         </div>
                         <button class="btn-action-panel" onclick="nhayDenThoiDiem()">NHẢY</button>
                     </div>
-
                     <!-- BẢNG HẸN GIỜ -->
                     <div id="timerPanel" class="panel-box">
                         <div class="panel-inputs">
@@ -466,6 +567,34 @@
                 </div>
             </div>
 
+            <!-- KHỐI FILE TEXT TRUYỆN TỪ INTERNET ARCHIVE -->
+            {% if danh_sach_text %}
+            <div class="text-files-box">
+                <div class="text-files-title">📄 Bản Văn Bản (Truyện Chữ)</div>
+                {% for txt in danh_sach_text %}
+                <div class="text-file-row">
+                    <div class="text-file-name">📝 {{ txt.ten_file }}</div>
+                    <div class="text-file-actions">
+                        <button class="btn-read-txt" onclick="docTruyenChu('{{ archive_id }}', '{{ txt.file_goc }}', '{{ txt.ten_file }}')">📖 Đọc trực tiếp</button>
+                        <a href="{{ txt.download_link }}" class="btn-dl-txt" download>⬇ Tải .TXT</a>
+                    </div>
+                </div>
+                {% endfor %}
+
+                <div class="reader-container" id="readerContainer">
+                    <div class="reader-toolbar">
+                        <span id="readerFileName" style="color: var(--accent-yellow); font-weight: bold; font-size: 13.5px;">Đang tải...</span>
+                        <div class="reader-controls">
+                            <button class="reader-btn" onclick="doiCoChu(-2)">A-</button>
+                            <button class="reader-btn" onclick="doiCoChu(2)">A+</button>
+                            <button class="reader-btn" style="background-color: #ef4444;" onclick="dongKhungDoc()">✕ Đóng</button>
+                        </div>
+                    </div>
+                    <div class="reader-content" id="readerContent">Đang tải nội dung từ máy chủ...</div>
+                </div>
+            </div>
+            {% endif %}
+
             <div class="story-tags-footer">
                 <span class="tag-label">Tags:</span>
                 {% for tag in story_tags %}
@@ -493,7 +622,6 @@
                 </div>
             </div>
             {% endif %}
-
         </div>
         <div class="sidebar-right">
             <div class="top-tuan-title">🔥 HOT</div>
@@ -532,11 +660,9 @@
         const downloadBtn = document.getElementById('downloadBtn');
         let currentItem = null;
         let timerInterval = null;
-
         const currentThuMuc = "{{ thu_muc }}";
         const currentTenTruyen = "{{ ten_truyen }}";
         const currentAnhBia = "{{ anh_bia if anh_bia else '' }}";
-
         const storageKey = "audio_progress_v2_" + encodeURIComponent(currentThuMuc);
         let savedData = {};
         try {
@@ -544,7 +670,6 @@
         } catch (e) {
             savedData = {};
         }
-
         function formatTime(seconds) {
             let m = Math.floor(seconds / 60);
             let s = Math.floor(seconds % 60);
@@ -555,25 +680,18 @@
             }
             return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
         }
-
         let pendingLink = savedData.link || null;
         let pendingChapterName = savedData.chapterName || null;
         let pendingTime = savedData.currentTime || 0;
-
         function layTenChuan(raw) {
             if (!raw) return "";
             return raw.split("#")[0].trim().toLowerCase();
         }
-
         function capNhatLichSuToanCuc(chapterName) {
             try {
                 let history = JSON.parse(localStorage.getItem('nghetruyen_history') || '[]');
                 const currentBaseName = layTenChuan(currentThuMuc);
-
-                // Loại bỏ bất kỳ bản ghi nào trùng tên gốc với truyện đang phát
                 history = history.filter(item => layTenChuan(item.thu_muc_raw) !== currentBaseName);
-
-                // Đưa bản ghi cập nhật mới nhất (đã có đủ ảnh và thư mục hiện tại) lên đầu
                 history.unshift({
                     thu_muc_raw: currentThuMuc,
                     ten_hien_thi: currentTenTruyen,
@@ -581,14 +699,12 @@
                     chuong_dang_nghe: chapterName,
                     cap_nhat: new Date().toISOString()
                 });
-
                 if (history.length > 20) {
                     history = history.slice(0, 20);
                 }
                 localStorage.setItem('nghetruyen_history', JSON.stringify(history));
             } catch (e) {}
         }
-
         function chonVaPhatChuongTeraBox(audioUrl, chapterName, element) {
             player.src = audioUrl;
             player.currentTime = 0;
@@ -596,15 +712,12 @@
             titleDisplay.innerText = "Đang phát: " + chapterName;
             downloadBtn.href = audioUrl;
             downloadBtn.download = chapterName + ".mp3";
-
             if (currentItem) currentItem.classList.remove('active');
             element.classList.add('active');
             currentItem = element;
-
             capNhatLichSuToanCuc(chapterName);
             dongPopup();
         }
-
         player.addEventListener('timeupdate', function() {
             if (player.src && currentItem) {
                 let chapterName = currentItem.querySelector('span').innerText.replace('▶ ', '');
@@ -619,7 +732,6 @@
                 } catch (e) {}
             }
         });
-
         player.addEventListener('ended', function() {
             if (currentItem && currentItem.nextElementSibling) {
                 let nextEl = currentItem.nextElementSibling;
@@ -630,7 +742,6 @@
                 }
             }
         });
-
         function chapNhanTiepTuc() {
             document.getElementById('resume-popup').style.display = 'none';
             if (pendingLink) {
@@ -651,7 +762,6 @@
                 }
             }
         }
-
         function dongPopup() {
             document.getElementById('resume-popup').style.display = 'none';
             const firstChapter = document.querySelector('.chapter-item');
@@ -662,7 +772,6 @@
                 }
             }
         }
-
         document.addEventListener("DOMContentLoaded", function() {
             if (savedData.link && savedData.currentTime > 5) {
                 const popup = document.getElementById('resume-popup');
@@ -679,8 +788,52 @@
             }
         });
 
-        function tua(giay) { player.currentTime += giay; }
+        /* TÍNH NĂNG ĐỌC FILE TEXT TỪ ARCHIVE.ORG */
+        let currentFontSize = 17;
+        let currentTextScrollKey = "";
 
+        async function docTruyenChu(archiveId, fileName, displayTitle) {
+            const container = document.getElementById('readerContainer');
+            const contentBox = document.getElementById('readerContent');
+            const titleBox = document.getElementById('readerFileName');
+
+            container.style.display = 'block';
+            titleBox.innerText = "📖 " + displayTitle;
+            contentBox.innerText = "⏳ Đang tải dữ liệu văn bản từ Internet Archive, vui lòng chờ giây lát...";
+            container.scrollIntoView({ behavior: 'smooth' });
+
+            currentTextScrollKey = "txt_scroll_" + encodeURIComponent(archiveId + "_" + fileName);
+
+            try {
+                const res = await fetch(`/api/archive-text/${encodeURIComponent(archiveId)}/${encodeURIComponent(fileName)}`);
+                const text = await res.text();
+                contentBox.innerText = text;
+
+                const savedScroll = localStorage.getItem(currentTextScrollKey);
+                if (savedScroll) {
+                    contentBox.scrollTop = parseInt(savedScroll);
+                }
+            } catch (err) {
+                contentBox.innerText = "✖ Lỗi kết nối khi tải nội dung văn bản.";
+            }
+        }
+
+        document.getElementById('readerContent')?.addEventListener('scroll', function() {
+            if (currentTextScrollKey) {
+                localStorage.setItem(currentTextScrollKey, this.scrollTop);
+            }
+        });
+
+        function doiCoChu(delta) {
+            currentFontSize = Math.max(13, Math.min(28, currentFontSize + delta));
+            document.getElementById('readerContent').style.fontSize = currentFontSize + 'px';
+        }
+
+        function dongKhungDoc() {
+            document.getElementById('readerContainer').style.display = 'none';
+        }
+
+        function tua(giay) { player.currentTime += giay; }
         let speeds = [1.0, 1.25, 1.5, 1.8, 2.0];
         let speedIdx = 0;
         function doiTocDo() {
@@ -688,7 +841,6 @@
             player.playbackRate = speeds[speedIdx];
             document.getElementById('speedLabel').innerText = speeds[speedIdx] + 'x';
         }
-
         function togglePanel(panelId) {
             const panel = document.getElementById(panelId);
             document.querySelectorAll('.panel-box').forEach(p => {
@@ -696,7 +848,6 @@
             });
             panel.classList.toggle('show');
         }
-
         function nhayDenThoiDiem() {
             const h = parseInt(document.getElementById('jumpHour').value) || 0;
             const m = parseInt(document.getElementById('jumpMin').value) || 0;
@@ -704,7 +855,6 @@
             player.currentTime = (h * 3600) + (m * 60) + s;
             document.getElementById('jumpPanel').classList.remove('show');
         }
-
         function dongBoSelectSangInput() {
             const selectVal = parseInt(document.getElementById('timerSelect').value);
             if (selectVal > 0) {
@@ -713,26 +863,21 @@
                 document.getElementById('customTimerMinutes').value = '';
             }
         }
-
         function batDauHenGio() {
             const customVal = parseInt(document.getElementById('customTimerMinutes').value);
             const selectVal = parseInt(document.getElementById('timerSelect').value);
-
             let minutes = 0;
             if (!isNaN(customVal) && customVal > 0) {
                 minutes = customVal;
             } else if (!isNaN(selectVal)) {
                 minutes = selectVal;
             }
-
             const statusEl = document.getElementById('timerStatus');
             if (timerInterval) clearInterval(timerInterval);
-
             if (minutes === 0) {
                 statusEl.innerText = "Đã tắt hẹn giờ.";
                 return;
             }
-
             let timeLeft = minutes * 60;
             statusEl.innerText = `Sẽ tắt nhạc sau ${minutes} phút nữa.`;
             timerInterval = setInterval(() => {
@@ -747,12 +892,10 @@
                 }
             }, 1000);
         }
-
         function scrollToTags() {
             const tagsFooter = document.querySelector('.story-tags-footer');
             if (tagsFooter) tagsFooter.scrollIntoView({ behavior: 'smooth' });
         }
-
         function locDanhSachChuong() {
             const keyword = document.getElementById('searchChapter').value.toLowerCase();
             document.querySelectorAll('.chapter-item').forEach(item => {
