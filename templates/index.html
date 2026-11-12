@@ -285,10 +285,18 @@
             background-color: var(--accent-yellow);
             color: #000;
         }
+        .btn-drop-flag {
+            background-color: #10b981;
+            color: #000;
+        }
+        .btn-drop-flag:hover {
+            background-color: #059669;
+            color: #fff;
+        }
 
-        /* THANH NHẬP KHỚP VỊ TRÍ ĐỌC */
+        /* THANH NHẬP KHỚP VỊ TRÍ & QUẢN LÝ CỜ */
         .sync-anchor-bar {
-            display: none;
+            display: flex;
             background-color: #161822;
             border-bottom: 1px solid #2e303e;
             padding: 12px 15px;
@@ -296,10 +304,10 @@
             align-items: center;
             flex-wrap: wrap;
         }
-        .sync-anchor-bar.show { display: flex; }
+        .sync-anchor-bar.hidden { display: none; }
         .sync-anchor-bar input {
             flex: 1;
-            min-width: 200px;
+            min-width: 190px;
             background-color: #0f1015;
             border: 1px solid #3f4152;
             color: #fff;
@@ -330,31 +338,25 @@
             cursor: pointer;
         }
         .btn-anchor-next:hover { background-color: #3f4152; }
+        .btn-clear-flags {
+            background-color: transparent;
+            color: #f87171;
+            border: 1px solid #7f1d1d;
+            padding: 6px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-clear-flags:hover {
+            background-color: #7f1d1d;
+            color: #fff;
+        }
         .sync-status-msg {
             width: 100%;
             font-size: 12px;
             color: #93c5fd;
             margin-top: 2px;
-        }
-        .speed-adjust-group {
-            display: inline-flex;
-            align-items: center;
-            background-color: #252630;
-            border-radius: 4px;
-            padding: 2px 6px;
-            gap: 5px;
-            font-size: 12px;
-            color: #cbd5e1;
-        }
-        .speed-adjust-group button {
-            background: #3f4152;
-            border: none;
-            color: #fff;
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-weight: bold;
+            line-height: 1.5;
         }
 
         .reader-content {
@@ -375,15 +377,36 @@
             border-radius: 6px;
             border-left: 3px solid transparent;
             cursor: pointer;
+            position: relative;
             transition: background-color 0.2s, color 0.2s, border-color 0.2s;
         }
         .reader-para:hover {
-            background-color: rgba(255, 255, 255, 0.04);
+            background-color: rgba(255, 255, 255, 0.05);
         }
         .reader-para.reading-active {
             background-color: rgba(234, 179, 8, 0.16);
             border-left-color: var(--accent-yellow);
             color: #ffffff;
+        }
+        .reader-para.has-flag {
+            border-left-color: #10b981;
+            background-color: rgba(16, 185, 129, 0.08);
+        }
+        .reader-para.reading-active.has-flag {
+            border-left-color: var(--accent-yellow);
+            background-color: rgba(234, 179, 8, 0.2);
+        }
+        .flag-badge {
+            display: inline-block;
+            background-color: #10b981;
+            color: #000;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 4px;
+            margin-right: 7px;
+            font-family: monospace;
+            vertical-align: middle;
         }
 
         .story-tags-footer { display: flex; gap: 8px; margin: 20px 0; flex-wrap: wrap; align-items: center; }
@@ -686,26 +709,22 @@
                     <div class="reader-toolbar">
                         <span id="readerFileName" style="color: var(--accent-yellow); font-weight: bold; font-size: 13.5px;">Đang tải...</span>
                         <div class="reader-controls">
-                            <button class="reader-btn" style="background-color: #2563eb;" onclick="toggleSyncAnchorBar()">📍 Khớp vị trí</button>
+                            <button class="reader-btn btn-drop-flag" onclick="camCoTaiDoanDangChon()" title="Cắm cờ tại đoạn đang tô sáng (hoặc bấm trực tiếp vào bất kỳ đoạn chữ nào)">🚩 Cắm cờ</button>
                             <button class="reader-btn active-sync" id="btnAutoSync" onclick="toggleAutoSync()">🔄 Tự cuộn: BẬT</button>
-                            <div class="speed-adjust-group" title="Tốc độ chữ chạy (ký tự/giây)">
-                                <span>Nhịp:</span>
-                                <button onclick="dieuChinhNhipDoc(-1)">-</button>
-                                <span id="charsPerSecLabel">15</span>
-                                <button onclick="dieuChinhNhipDoc(1)">+</button>
-                            </div>
+                            <button class="reader-btn" onclick="toggleSyncAnchorBar()" title="Ẩn/hiện thanh tìm kiếm & quản lý cờ">🔍 Tìm</button>
                             <button class="reader-btn" onclick="doiCoChu(-2)">A-</button>
                             <button class="reader-btn" onclick="doiCoChu(2)">A+</button>
                             <button class="reader-btn" style="background-color: #ef4444;" onclick="dongKhungDoc()">✕ Đóng</button>
                         </div>
                     </div>
 
-                    <!-- THANH NHẬP SỐ CHƯƠNG HOẶC CÂU ĐANG ĐỌC ĐỂ KHỚP MỐC -->
-                    <div class="sync-anchor-bar show" id="syncAnchorBar">
-                        <input type="text" id="anchorSearchInput" placeholder="Nhập số chương (vd: Chương 12) hoặc 1 câu đang nghe để khớp..." onkeydown="if(event.key==='Enter') timVaKhopMoc()">
-                        <button class="btn-anchor-go" onclick="timVaKhopMoc()">🎯 Khớp ngay</button>
+                    <!-- THANH TÌM KIẾM & QUẢN LÝ CỜ ĐA ĐIỂM -->
+                    <div class="sync-anchor-bar" id="syncAnchorBar">
+                        <input type="text" id="anchorSearchInput" placeholder="Gõ số chương hoặc 1 câu đang nghe để tìm tới..." onkeydown="if(event.key==='Enter') timVaKhopMoc()">
+                        <button class="btn-anchor-go" onclick="timVaKhopMoc()">🎯 Tìm & Cắm cờ</button>
                         <button class="btn-anchor-next" id="btnAnchorNext" style="display:none;" onclick="chuyenKetQuaKhopTiepTheo()">Tiếp theo ⏭</button>
-                        <div class="sync-status-msg" id="syncStatusMsg">💡 Mẹo: Gõ số chương hoặc 1 cụm từ đang nghe rồi bấm "Khớp ngay" (hoặc bấm trực tiếp vào đoạn chữ bên dưới) để đồng bộ.</div>
+                        <button class="btn-clear-flags" id="btnClearFlags" style="display:none;" onclick="xoaTatCaCo()">🗑️ Xóa cờ (0)</button>
+                        <div class="sync-status-msg" id="syncStatusMsg">💡 Bấm trực tiếp vào bất kỳ đoạn chữ nào (hoặc tìm câu đang đọc) để cắm cờ 🚩. Cắm từ 2 cờ trở lên hệ thống sẽ tự đo tốc độ đọc thực tế!</div>
                     </div>
 
                     <div class="reader-content" id="readerContent">Đang tải nội dung từ máy chủ...</div>
@@ -789,56 +808,209 @@
             savedData = {};
         }
 
-        /* BIẾN ĐỒNG BỘ TEXT THEO MỐC NEO (ANCHOR) */
+        /* HỆ THỐNG CẮM CỜ ĐA ĐIỂM & NỘI SUY TỐC ĐỘ ĐỌC THỰC TẾ */
         const allChapterItems = Array.from(document.querySelectorAll('.chapter-item'));
         const chapterDurations = allChapterItems.map(el => parseFloat(el.getAttribute('data-duration')) || 0);
         const hasValidDurations = chapterDurations.length > 0 && chapterDurations.every(d => d > 0);
         const totalSeriesDuration = hasValidDurations ? chapterDurations.reduce((a, b) => a + b, 0) : 0;
 
-        let paragraphMap = []; // { el, textLower, startChar, endChar }
+        let paragraphMap = []; // { index, el, textLower, startChar, endChar }
         let totalTextChars = 0;
         let autoSyncEnabled = true;
-        let lastActiveParaEl = null;
+        let lastActiveParaObj = null;
 
-        // Tốc độ đọc cơ sở ở mức 1.0x (ký tự/giây) - người dùng có thể chỉnh +/-
-        let baseCharsPerSec = parseFloat(localStorage.getItem('nghetruyen_cps') || '15');
-        let syncAnchor = null; // { chapterIndex, audioTime, charPos }
+        // Danh sách các cờ đã cắm của tập hiện tại: [{ audioTime, charPos, paraIndex }] (luôn sort theo audioTime)
+        let episodeFlags = [];
         let searchMatches = [];
         let searchMatchCursor = 0;
 
-        function getAnchorStorageKey() {
+        // Tốc độ chuẩn mặc định ở 1.0x (15 ký tự/giây audio). Lưu ý: player.currentTime là thời gian trong file audio (đã phản ánh tốc độ phát)
+        const DEFAULT_BASE_CPS = 15.0;
+
+        function getFlagsStorageKey() {
             const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
-            return `txt_anchor_${encodeURIComponent(currentThuMuc)}_ep_${idx}`;
+            return `txt_flags_v2_${encodeURIComponent(currentThuMuc)}_ep_${idx}`;
         }
 
-        function taiLaiMocDaLuuChoTapHienTai() {
+        function taiLaiDanhSachCo() {
             try {
-                const raw = localStorage.getItem(getAnchorStorageKey());
-                syncAnchor = raw ? JSON.parse(raw) : null;
+                const raw = localStorage.getItem(getFlagsStorageKey());
+                episodeFlags = raw ? JSON.parse(raw) : [];
+                if (!Array.isArray(episodeFlags)) episodeFlags = [];
+                episodeFlags.sort((a, b) => a.audioTime - b.audioTime);
             } catch (e) {
-                syncAnchor = null;
+                episodeFlags = [];
             }
+            capNhatGiaoDienCacCo();
         }
 
-        function datMocTaiDoanVan(paraObj, customMsg = null) {
-            if (!paraObj) return;
-            const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
-            syncAnchor = {
-                chapterIndex: idx,
-                audioTime: player.currentTime || 0,
-                charPos: paraObj.startChar
-            };
+        function luuDanhSachCo() {
             try {
-                localStorage.setItem(getAnchorStorageKey(), JSON.stringify(syncAnchor));
+                episodeFlags.sort((a, b) => a.audioTime - b.audioTime);
+                localStorage.setItem(getFlagsStorageKey(), JSON.stringify(episodeFlags));
             } catch (e) {}
+            capNhatGiaoDienCacCo();
+        }
 
-            highlightVaCuonDenPara(paraObj.el, true);
+        function camCoTaiDoanVan(paraObj, customPrefix = null) {
+            if (!paraObj) return;
+            const curAudioTime = player.currentTime || 0;
 
+            // Xóa cờ cũ nếu quá sát nhau (< 3 giây) hoặc trùng cùng đoạn văn để tránh nhiễu đạo hàm tốc độ
+            episodeFlags = episodeFlags.filter(f =>
+                Math.abs(f.audioTime - curAudioTime) >= 3 && f.paraIndex !== paraObj.index
+            );
+
+            episodeFlags.push({
+                audioTime: curAudioTime,
+                charPos: paraObj.startChar,
+                paraIndex: paraObj.index
+            });
+
+            luuDanhSachCo();
+            highlightVaCuonDenPara(paraObj, true);
+
+            const measuredSpeed = tinhTocDoDoDuoc();
             const statusEl = document.getElementById('syncStatusMsg');
             if (statusEl) {
-                const preview = paraObj.el.textContent.slice(0, 45) + (paraObj.el.textContent.length > 45 ? '...' : '');
-                statusEl.innerText = customMsg || `✅ Đã khớp mốc tại giây ${formatTime(syncAnchor.audioTime)}: "${preview}"`;
+                const speedNote = episodeFlags.length >= 2
+                    ? ` | Tốc độ đo được giữa các cờ: ~${measuredSpeed.toFixed(1)} chữ/giây audio`
+                    : ` | Cắm thêm 1 cờ nữa sau vài phút để tự đo chuẩn tốc độ đọc`;
+                const prefix = customPrefix || `🚩 Đã cắm cờ tại ${formatTime(curAudioTime)}`;
+                statusEl.innerText = `${prefix}${speedNote}`;
             }
+        }
+
+        function camCoTaiDoanDangChon() {
+            if (lastActiveParaObj) {
+                camCoTaiDoanVan(lastActiveParaObj);
+            } else if (paragraphMap.length > 0) {
+                camCoTaiDoanVan(paragraphMap[0]);
+            }
+        }
+
+        function xoaTatCaCo() {
+            episodeFlags = [];
+            luuDanhSachCo();
+            const statusEl = document.getElementById('syncStatusMsg');
+            if (statusEl) {
+                statusEl.innerText = "🗑️ Đã xóa toàn bộ cờ của tập này.";
+            }
+        }
+
+        function capNhatGiaoDienCacCo() {
+            // Xóa badge cờ cũ trên DOM
+            document.querySelectorAll('.reader-para.has-flag').forEach(el => {
+                el.classList.remove('has-flag');
+                const badge = el.querySelector('.flag-badge');
+                if (badge) badge.remove();
+            });
+
+            // Gắn lại badge cho từng cờ đang có
+            episodeFlags.forEach(flag => {
+                const paraObj = paragraphMap[flag.paraIndex];
+                if (paraObj && paraObj.el) {
+                    paraObj.el.classList.add('has-flag');
+                    const badge = document.createElement('span');
+                    badge.className = 'flag-badge';
+                    badge.textContent = `🚩 ${formatTime(flag.audioTime)}`;
+                    badge.title = 'Bấm vào đoạn này để cập nhật lại cờ';
+                    paraObj.el.prepend(badge);
+                }
+            });
+
+            const clearBtn = document.getElementById('btnClearFlags');
+            if (clearBtn) {
+                if (episodeFlags.length > 0) {
+                    clearBtn.style.display = 'inline-block';
+                    clearBtn.innerText = `🗑️ Xóa cờ (${episodeFlags.length})`;
+                } else {
+                    clearBtn.style.display = 'none';
+                }
+            }
+        }
+
+        function tinhTocDoDoDuoc() {
+            if (episodeFlags.length < 2) return DEFAULT_BASE_CPS;
+            // Tính tốc độ trung bình có trọng số từ các cặp cờ hợp lệ (chữ tăng theo thời gian)
+            let totalDeltaChars = 0;
+            let totalDeltaTime = 0;
+            for (let i = 1; i < episodeFlags.length; i++) {
+                const dt = episodeFlags[i].audioTime - episodeFlags[i - 1].audioTime;
+                const dc = episodeFlags[i].charPos - episodeFlags[i - 1].charPos;
+                if (dt > 2 && dc > 0) {
+                    totalDeltaTime += dt;
+                    totalDeltaChars += dc;
+                }
+            }
+            if (totalDeltaTime > 0 && totalDeltaChars > 0) {
+                // Giới hạn trong khoảng hợp lý (5 -> 35 ký tự / giây audio)
+                return Math.max(5, Math.min(35, totalDeltaChars / totalDeltaTime));
+            }
+            return DEFAULT_BASE_CPS;
+        }
+
+        function tinhViTriKyTuHienTai() {
+            const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
+            const t = player.currentTime || 0;
+
+            // Trường hợp 1: Có >= 2 cờ -> Nội suy giữa 2 cờ bao quanh, hoặc ngoại suy bằng tốc độ đo được
+            if (episodeFlags.length >= 2) {
+                // Nếu thời gian hiện tại nằm trước cờ đầu tiên
+                if (t <= episodeFlags[0].audioTime) {
+                    const segDt = episodeFlags[1].audioTime - episodeFlags[0].audioTime;
+                    const segSpeed = segDt > 1
+                        ? (episodeFlags[1].charPos - episodeFlags[0].charPos) / segDt
+                        : tinhTocDoDoDuoc();
+                    const pos = episodeFlags[0].charPos - (episodeFlags[0].audioTime - t) * Math.max(5, segSpeed);
+                    return Math.max(0, Math.min(totalTextChars, Math.floor(pos)));
+                }
+
+                // Nếu thời gian hiện tại nằm giữa 2 cờ i và i+1
+                for (let i = 0; i < episodeFlags.length - 1; i++) {
+                    const f1 = episodeFlags[i];
+                    const f2 = episodeFlags[i + 1];
+                    if (t >= f1.audioTime && t <= f2.audioTime) {
+                        const span = f2.audioTime - f1.audioTime;
+                        const ratio = span > 0 ? (t - f1.audioTime) / span : 0;
+                        const pos = f1.charPos + ratio * (f2.charPos - f1.charPos);
+                        return Math.max(0, Math.min(totalTextChars, Math.floor(pos)));
+                    }
+                }
+
+                // Nếu thời gian hiện tại đã vượt qua cờ cuối cùng -> ngoại suy bằng tốc độ đo được của đoạn cờ gần nhất
+                const lastF = episodeFlags[episodeFlags.length - 1];
+                const prevF = episodeFlags[episodeFlags.length - 2];
+                const recentDt = lastF.audioTime - prevF.audioTime;
+                const recentDc = lastF.charPos - prevF.charPos;
+                const speed = (recentDt > 2 && recentDc > 0)
+                    ? Math.max(5, Math.min(35, recentDc / recentDt))
+                    : tinhTocDoDoDuoc();
+
+                const pos = lastF.charPos + (t - lastF.audioTime) * speed;
+                return Math.max(0, Math.min(totalTextChars, Math.floor(pos)));
+            }
+
+            // Trường hợp 2: Mới có 1 cờ -> chạy từ cờ đó theo tốc độ chuẩn
+            if (episodeFlags.length === 1) {
+                const f0 = episodeFlags[0];
+                const pos = f0.charPos + (t - f0.audioTime) * DEFAULT_BASE_CPS;
+                return Math.max(0, Math.min(totalTextChars, Math.floor(pos)));
+            }
+
+            // Trường hợp 3: Chưa cắm cờ nào -> ước lượng ban đầu theo tỷ lệ thời lượng tập
+            const curDur = player.duration || chapterDurations[idx] || 1;
+            let ratio = 0;
+            if (hasValidDurations && totalSeriesDuration > 0) {
+                let elapsedBefore = 0;
+                for (let i = 0; i < idx; i++) {
+                    elapsedBefore += chapterDurations[i];
+                }
+                ratio = (elapsedBefore + Math.min(t, chapterDurations[idx])) / totalSeriesDuration;
+            } else {
+                ratio = (idx + Math.min(1, t / curDur)) / Math.max(1, allChapterItems.length);
+            }
+            return Math.max(0, Math.min(totalTextChars, Math.floor(ratio * totalTextChars)));
         }
 
         function timVaKhopMoc() {
@@ -861,89 +1033,56 @@
 
             if (searchMatches.length === 0) {
                 nextBtn.style.display = 'none';
-                statusEl.innerText = `❌ Không tìm thấy "${inputEl.value}" trong văn bản. Thử gõ cụm từ ngắn hơn hoặc không dấu câu.`;
+                statusEl.innerText = `❌ Không tìm thấy "${inputEl.value}" trong văn bản.`;
                 return;
             }
 
             nextBtn.style.display = searchMatches.length > 1 ? 'inline-block' : 'none';
             const chosen = searchMatches[0];
-            const infoExtra = searchMatches.length > 1
-                ? ` (Tìm thấy ${searchMatches.length} kết quả — bấm "Tiếp theo ⏭" nếu chưa đúng đoạn)`
+            const extra = searchMatches.length > 1
+                ? ` (Kết quả 1/${searchMatches.length} — bấm "Tiếp theo ⏭" nếu chưa đúng)`
                 : '';
-            datMocTaiDoanVan(
-                chosen,
-                `✅ Đã khớp tại giây ${formatTime(player.currentTime || 0)}${infoExtra}`
-            );
+            camCoTaiDoanVan(chosen, `🚩 Đã tìm thấy & cắm cờ tại ${formatTime(player.currentTime || 0)}${extra}`);
         }
 
         function chuyenKetQuaKhopTiepTheo() {
             if (searchMatches.length <= 1) return;
+            // Xóa cờ vừa cắm nhầm ở kết quả trước đó trước khi nhảy sang kết quả tiếp theo
+            const prevChosen = searchMatches[searchMatchCursor];
+            if (prevChosen) {
+                episodeFlags = episodeFlags.filter(f => f.paraIndex !== prevChosen.index);
+            }
             searchMatchCursor = (searchMatchCursor + 1) % searchMatches.length;
             const chosen = searchMatches[searchMatchCursor];
-            const statusEl = document.getElementById('syncStatusMsg');
-            datMocTaiDoanVan(
+            camCoTaiDoanVan(
                 chosen,
-                `✅ Kết quả ${searchMatchCursor + 1}/${searchMatches.length} — Đã khớp tại giây ${formatTime(player.currentTime || 0)}`
+                `🚩 Kết quả ${searchMatchCursor + 1}/${searchMatches.length} — Đã cắm cờ tại ${formatTime(player.currentTime || 0)}`
             );
-        }
-
-        function dieuChinhNhipDoc(delta) {
-            baseCharsPerSec = Math.max(6, Math.min(30, baseCharsPerSec + delta));
-            localStorage.setItem('nghetruyen_cps', baseCharsPerSec.toString());
-            const label = document.getElementById('charsPerSecLabel');
-            if (label) label.innerText = baseCharsPerSec;
-            dongBoViTriText(true);
         }
 
         function toggleSyncAnchorBar() {
             const bar = document.getElementById('syncAnchorBar');
             if (bar) {
-                bar.classList.toggle('show');
-                if (bar.classList.contains('show')) {
+                bar.classList.toggle('hidden');
+                if (!bar.classList.contains('hidden')) {
                     document.getElementById('anchorSearchInput')?.focus();
                 }
             }
         }
 
-        function tinhViTriKyTuHienTai() {
-            const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
-            const curTime = player.currentTime || 0;
-
-            // 1. Ưu tiên tính từ mốc neo (Anchor) đã khớp nếu có
-            if (syncAnchor && syncAnchor.chapterIndex === idx) {
-                const deltaSeconds = curTime - syncAnchor.audioTime;
-                const pos = syncAnchor.charPos + (deltaSeconds * baseCharsPerSec);
-                return Math.max(0, Math.min(totalTextChars, Math.floor(pos)));
-            }
-
-            // 2. Nếu chưa neo mốc bao giờ, ước lượng ban đầu theo tỷ lệ thời lượng tập
-            const curDur = player.duration || chapterDurations[idx] || 1;
-            let ratio = 0;
-            if (hasValidDurations && totalSeriesDuration > 0) {
-                let elapsedBefore = 0;
-                for (let i = 0; i < idx; i++) {
-                    elapsedBefore += chapterDurations[i];
+        function highlightVaCuonDenPara(paraObj, forceScroll = false) {
+            if (!paraObj || !paraObj.el) return;
+            if (paraObj !== lastActiveParaObj) {
+                if (lastActiveParaObj && lastActiveParaObj.el) {
+                    lastActiveParaObj.el.classList.remove('reading-active');
                 }
-                ratio = (elapsedBefore + Math.min(curTime, chapterDurations[idx])) / totalSeriesDuration;
-            } else {
-                ratio = (idx + Math.min(1, curTime / curDur)) / Math.max(1, allChapterItems.length);
-            }
-            return Math.max(0, Math.min(totalTextChars, Math.floor(ratio * totalTextChars)));
-        }
-
-        function highlightVaCuonDenPara(el, forceScroll = false) {
-            if (!el) return;
-            if (el !== lastActiveParaEl) {
-                if (lastActiveParaEl) {
-                    lastActiveParaEl.classList.remove('reading-active');
-                }
-                el.classList.add('reading-active');
-                lastActiveParaEl = el;
+                paraObj.el.classList.add('reading-active');
+                lastActiveParaObj = paraObj;
                 if (autoSyncEnabled || forceScroll) {
-                    cuonGiuaKhungDoc(el);
+                    cuonGiuaKhungDoc(paraObj.el);
                 }
             } else if (forceScroll) {
-                cuonGiuaKhungDoc(el);
+                cuonGiuaKhungDoc(paraObj.el);
             }
         }
 
@@ -971,7 +1110,7 @@
             }
 
             if (matched) {
-                highlightVaCuonDenPara(matched.el, forceScroll);
+                highlightVaCuonDenPara(matched, forceScroll);
             }
         }
 
@@ -1040,6 +1179,8 @@
         function chonVaPhatChuongTeraBox(audioUrl, chapterName, element) {
             player.src = audioUrl;
             player.currentTime = 0;
+            // Giữ nguyên tốc độ nghe mà người dùng đã chọn trước đó
+            player.playbackRate = speeds[speedIdx];
             player.play().catch(e => console.log("Auto-play blocked:", e));
             titleDisplay.innerText = "Đang phát: " + chapterName;
             downloadBtn.href = audioUrl;
@@ -1050,7 +1191,7 @@
             capNhatLichSuToanCuc(chapterName);
             dongPopup();
 
-            taiLaiMocDaLuuChoTapHienTai();
+            taiLaiDanhSachCo();
             if (document.getElementById('readerContainer')?.style.display === 'block') {
                 dongBoViTriText(true);
             }
@@ -1125,9 +1266,6 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            const cpsLabel = document.getElementById('charsPerSecLabel');
-            if (cpsLabel) cpsLabel.innerText = baseCharsPerSec;
-
             if (savedData.link && savedData.currentTime > 5) {
                 const popup = document.getElementById('resume-popup');
                 document.getElementById('popup-chapter-name').innerText = savedData.chapterName || "Chương trước";
@@ -1143,7 +1281,7 @@
             }
         });
 
-        /* TÍNH NĂNG ĐỌC FILE TEXT & KHỚP VỊ TRÍ TỪ ARCHIVE.ORG */
+        /* TÍNH NĂNG ĐỌC FILE TEXT & CẮM CỜ ĐỒNG BỘ */
         let currentFontSize = 17;
 
         async function docTruyenChu(archiveId, fileName, displayTitle) {
@@ -1156,8 +1294,6 @@
             contentBox.innerHTML = "<div style='color:var(--text-muted);'>⏳ Đang tải dữ liệu văn bản từ Internet Archive, vui lòng chờ giây lát...</div>";
             container.scrollIntoView({ behavior: 'smooth' });
 
-            taiLaiMocDaLuuChoTapHienTai();
-
             try {
                 const res = await fetch(`/api/archive-text/${encodeURIComponent(archiveId)}/${encodeURIComponent(fileName)}`);
                 const rawText = (await res.text()).normalize('NFC');
@@ -1165,9 +1301,10 @@
                 const lines = rawText.split(/\r?\n/);
                 paragraphMap = [];
                 totalTextChars = 0;
-                lastActiveParaEl = null;
+                lastActiveParaObj = null;
 
                 const fragment = document.createDocumentFragment();
+                let paraIdx = 0;
                 for (let i = 0; i < lines.length; i++) {
                     const lineText = lines[i].trim();
                     if (!lineText) continue;
@@ -1180,15 +1317,15 @@
                     totalTextChars += lineText.length;
 
                     const paraObj = {
+                        index: paraIdx++,
                         el: p,
                         textLower: lineText.toLowerCase().replace(/\s+/g, ' '),
                         startChar: startChar,
                         endChar: totalTextChars
                     };
 
-                    // Cho phép bấm trực tiếp vào bất kỳ đoạn văn nào để khớp mốc ngay tại đó
                     p.onclick = function() {
-                        datMocTaiDoanVan(paraObj);
+                        camCoTaiDoanVan(paraObj);
                     };
 
                     fragment.appendChild(p);
@@ -1198,6 +1335,7 @@
                 contentBox.innerHTML = '';
                 contentBox.appendChild(fragment);
 
+                taiLaiDanhSachCo();
                 dongBoViTriText(true);
             } catch (err) {
                 contentBox.innerText = "✖ Lỗi kết nối khi tải nội dung văn bản.";
