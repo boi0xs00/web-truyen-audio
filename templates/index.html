@@ -418,7 +418,6 @@
             border-left-color: var(--accent-yellow);
             background-color: rgba(234, 179, 8, 0.16);
         }
-        /* CHỮ CHẠY KIỂU KARAOKE TRONG ĐOẠN ĐANG ĐỌC */
         .para-spoken {
             color: #fde047;
             text-shadow: 0 0 10px rgba(250, 204, 21, 0.25);
@@ -769,7 +768,7 @@
                         <button class="btn-anchor-go" onclick="timVaKhopMoc()">🎯 Tìm & Cắm cờ</button>
                         <button class="btn-anchor-next" id="btnAnchorNext" style="display:none;" onclick="chuyenKetQuaKhopTiepTheo()">Tiếp theo ⏭</button>
                         <button class="btn-clear-flags" id="btnClearFlags" style="display:none;" onclick="xoaTatCaCo()">🗑️ Xóa cờ (0)</button>
-                        <div class="sync-status-msg" id="syncStatusMsg">💡 Dải màu vàng chạy trên từng chữ thể hiện vị trí ước tính hiện tại. Nếu chữ chạy nhanh hơn giọng đọc, bấm <b>-</b> ở ô <b>Nhịp</b>; nếu chậm hơn, bấm <b>+</b>.</div>
+                        <div class="sync-status-msg" id="syncStatusMsg">💡 Dải màu vàng tự ngắt nghỉ theo dấu <b>,</b> và <b>.</b> giống giọng đọc. Bấm <b>-</b> / <b>+</b> ở ô <b>Nhịp</b> để chỉnh nhanh chậm bất cứ lúc nào.</div>
                     </div>
 
                     <div class="reader-content" id="readerContent">Đang tải nội dung từ máy chủ...</div>
@@ -858,30 +857,61 @@
             return raw.split("#")[0].trim().toLowerCase();
         }
 
-        /* HỆ THỐNG ĐỒNG BỘ TEXT & CHỮ CHẠY KARAOKE MƯỢT 60FPS */
+        /* HỆ THỐNG ĐỒNG BỘ TEXT & TÔ MÀU NGẮT NGHỈ THEO DẤU CÂU */
         const allChapterItems = Array.from(document.querySelectorAll('.chapter-item'));
         const chapterDurations = allChapterItems.map(el => parseFloat(el.getAttribute('data-duration')) || 0);
         const hasValidDurations = chapterDurations.length > 0 && chapterDurations.every(d => d > 0);
         const totalSeriesDuration = hasValidDurations ? chapterDurations.reduce((a, b) => a + b, 0) : 0;
 
-        let paragraphMap = []; // { index, el, rawText, textLower, startWeight, endWeight, hasFlag, flagTime }
+        let paragraphMap = []; // { index, el, rawText, textLower, startWeight, endWeight, tokens, totalTokenWeight, hasFlag, flagTime }
         let totalSpeechWeight = 0;
         let autoSyncEnabled = true;
         let lastActiveParaObj = null;
         let syncAnimationFrameId = null;
 
-        let episodeFlags = []; // [{ audioTime, weightPos, paraIndex }]
+        let episodeFlags = [];
         let searchMatches = [];
         let searchMatchCursor = 0;
 
-        const storyWpsStorageKey = `txt_story_wps_${encodeURIComponent(layTenChuan(currentThuMuc))}`;
+        const storyWpsStorageKey = `txt_story_wps_v3_${encodeURIComponent(layTenChuan(currentThuMuc))}`;
         let calibratedWps = parseFloat(localStorage.getItem(storyWpsStorageKey) || '4.2');
 
-        function tinhTrongLuongPhatAm(text) {
-            const words = text.split(/\s+/).filter(Boolean).length;
-            const shortPauses = (text.match(/[,;:\-–—]/g) || []).length;
-            const longPauses = (text.match(/[.!?…]+/g) || []).length;
-            return Math.max(1, words + (shortPauses * 1.1) + (longPauses * 2.2) + 2.0);
+        /**
+         * Phân tích từng đoạn văn thành danh sách các token (từ + khoảng trắng + dấu ngắt câu)
+         * để cả bộ đếm tổng lẫn hiệu ứng tô màu vàng đều dừng nghỉ đúng nhịp tại dấu , và .
+         */
+        function phanTichTokenDoanVan(text) {
+            const parts = text.split(/(\s+)/);
+            const tokens = [];
+            let accWeight = 0;
+
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                if (!part) continue;
+
+                if (/^\s+$/.test(part)) {
+                    // Khoảng trắng chỉ nối theo từ trước đó, không tốn thời gian riêng
+                    tokens.push({ str: part, endW: accWeight });
+                } else {
+                    // 1. Trọng số của bản thân từ được đọc
+                    let w = 1.0;
+                    // 2. Trọng số nghỉ nếu cuối từ có dính dấu ngắt câu
+                    if (/[.!?…]+["”'’)\]]*$/.test(part)) {
+                        w += 2.3; // Nghỉ hết câu (~0.5s)
+                    } else if (/[,;:\-–—]+["”'’)\]]*$/.test(part)) {
+                        w += 1.1; // Nghỉ ngắt vế (~0.25s)
+                    }
+                    accWeight += w;
+                    tokens.push({ str: part, endW: accWeight });
+                }
+            }
+
+            // Cộng thêm nhịp nghỉ khi xuống dòng hết đoạn văn (~0.45s)
+            const totalWeightWithBreak = Math.max(1, accWeight + 2.0);
+            return {
+                tokens: tokens,
+                totalWeight: totalWeightWithBreak
+            };
         }
 
         function capNhatHienThiWps() {
@@ -890,7 +920,7 @@
         }
 
         function tinhChinhNhip(delta) {
-            calibratedWps = Math.max(1.5, Math.min(10.0, Math.round((calibratedWps + delta) * 10) / 10));
+            calibratedWps = Math.max(1.5, Math.min(12.0, Math.round((calibratedWps + delta) * 10) / 10));
             localStorage.setItem(storyWpsStorageKey, calibratedWps.toString());
             capNhatHienThiWps();
             dongBoViTriText(true);
@@ -898,7 +928,7 @@
 
         function getFlagsStorageKey() {
             const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
-            return `txt_flags_v3_${encodeURIComponent(currentThuMuc)}_ep_${idx}`;
+            return `txt_flags_v5_${encodeURIComponent(currentThuMuc)}_ep_${idx}`;
         }
 
         function taiLaiDanhSachCo() {
@@ -921,7 +951,7 @@
             capNhatGiaoDienCacCo();
         }
 
-        function tinhTocDoTrongSoDoDuoc() {
+        function doVaLuuTocDoTuCacCo() {
             if (episodeFlags.length < 2) return calibratedWps;
 
             let totalDeltaWeight = 0;
@@ -948,11 +978,10 @@
             }
 
             if (totalDeltaTime > 0 && totalDeltaWeight > 0) {
-                const measured = Math.max(1.5, Math.min(10.0, totalDeltaWeight / totalDeltaTime));
+                const measured = Math.max(1.5, Math.min(12.0, totalDeltaWeight / totalDeltaTime));
                 calibratedWps = Math.round(measured * 10) / 10;
                 localStorage.setItem(storyWpsStorageKey, calibratedWps.toString());
                 capNhatHienThiWps();
-                return measured;
             }
             return calibratedWps;
         }
@@ -972,14 +1001,14 @@
             });
 
             luuDanhSachCo();
-            const measuredWps = tinhTocDoTrongSoDoDuoc();
+            const measuredWps = doVaLuuTocDoTuCacCo();
             dongBoViTriText(true);
 
             const statusEl = document.getElementById('syncStatusMsg');
             if (statusEl) {
                 const speedNote = episodeFlags.length >= 2
-                    ? ` | Nhịp chuẩn đo được: ${measuredWps.toFixed(1)} từ/giây`
-                    : ` | Cắm thêm 1 cờ sau vài chục giây để tự khóa nhịp đọc chuẩn`;
+                    ? ` | Nhịp đo được: ${measuredWps.toFixed(1)} (có thể chỉnh +/- bất cứ lúc nào)`
+                    : ` | Cắm thêm 1 cờ sau vài chục giây để tự đo nhịp đọc`;
                 const prefix = customPrefix || `🚩 Đã cắm cờ tại ${formatTime(curAudioTime)}`;
                 statusEl.innerText = `${prefix}${speedNote}`;
             }
@@ -1002,7 +1031,7 @@
             }
         }
 
-        function renderNoiDungDoanVan(paraObj, progressRatio = null) {
+        function renderNoiDungDoanVan(paraObj, localElapsedWeight = null) {
             if (!paraObj || !paraObj.el) return;
             const el = paraObj.el;
             el.innerHTML = '';
@@ -1014,30 +1043,36 @@
                 el.appendChild(badge);
             }
 
-            if (progressRatio === null) {
+            if (localElapsedWeight === null) {
                 el.appendChild(document.createTextNode(paraObj.rawText));
             } else {
-                const clamped = Math.max(0, Math.min(1, progressRatio));
-                // Tìm ranh giới khoảng trắng gần nhất để dải màu nhảy trọn từng từ cho dễ nhìn
-                let splitIdx = Math.floor(clamped * paraObj.rawText.length);
-                if (splitIdx > 0 && splitIdx < paraObj.rawText.length) {
-                    const nextSpace = paraObj.rawText.indexOf(' ', splitIdx);
-                    if (nextSpace !== -1 && nextSpace - splitIdx <= 8) {
-                        splitIdx = nextSpace + 1;
+                // Tô vàng các token có mốc endW <= localElapsedWeight -> tự dừng nghỉ ở dấu , và .
+                let spokenText = '';
+                let unspokenText = '';
+                for (let i = 0; i < paraObj.tokens.length; i++) {
+                    const tok = paraObj.tokens[i];
+                    if (tok.endW <= localElapsedWeight) {
+                        spokenText += tok.str;
+                    } else {
+                        unspokenText += tok.str;
                     }
                 }
 
+                const ratio = paraObj.totalTokenWeight > 0
+                    ? Math.max(0, Math.min(1, localElapsedWeight / paraObj.totalTokenWeight))
+                    : 0;
+
                 const spokenSpan = document.createElement('span');
                 spokenSpan.className = 'para-spoken';
-                spokenSpan.textContent = paraObj.rawText.slice(0, splitIdx);
+                spokenSpan.textContent = spokenText;
 
                 const unspokenSpan = document.createElement('span');
                 unspokenSpan.className = 'para-unspoken';
-                unspokenSpan.textContent = paraObj.rawText.slice(splitIdx);
+                unspokenSpan.textContent = unspokenText;
 
                 const bar = document.createElement('div');
                 bar.className = 'para-progress-bar';
-                bar.style.width = `${(clamped * 100).toFixed(1)}%`;
+                bar.style.width = `${(ratio * 100).toFixed(1)}%`;
 
                 el.appendChild(spokenSpan);
                 el.appendChild(unspokenSpan);
@@ -1061,7 +1096,6 @@
                 }
             });
 
-            // Render lại toàn bộ đoạn để cập nhật badge cờ
             paragraphMap.forEach(p => {
                 if (p !== lastActiveParaObj) {
                     renderNoiDungDoanVan(p, null);
@@ -1082,7 +1116,7 @@
         function tinhViTriTrongSoHienTai() {
             const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
             const t = player.currentTime || 0;
-            const currentWps = tinhTocDoTrongSoDoDuoc();
+            const currentWps = calibratedWps;
 
             if (episodeFlags.length >= 2) {
                 if (t <= episodeFlags[0].audioTime) {
@@ -1205,11 +1239,7 @@
             }
 
             if (matched) {
-                // Tính tỷ lệ tiến độ bên trong chính đoạn văn đó (0.0 -> 1.0)
-                const paraSpan = matched.endWeight - matched.startWeight;
-                const intraProgress = paraSpan > 0
-                    ? Math.max(0, Math.min(1, (targetWeight - matched.startWeight) / paraSpan))
-                    : 0;
+                const localElapsedWeight = Math.max(0, targetWeight - matched.startWeight);
 
                 if (matched !== lastActiveParaObj) {
                     if (lastActiveParaObj && lastActiveParaObj.el) {
@@ -1226,8 +1256,7 @@
                     cuonGiuaKhungDoc(matched.el);
                 }
 
-                // Cập nhật dải màu vàng chạy theo từng chữ trong đoạn đang đọc
-                renderNoiDungDoanVan(matched, intraProgress);
+                renderNoiDungDoanVan(matched, localElapsedWeight);
             }
         }
 
@@ -1434,9 +1463,9 @@
                     p.className = 'reader-para';
                     p.textContent = lineText;
 
-                    const weight = tinhTrongLuongPhatAm(lineText);
+                    const parsed = phanTichTokenDoanVan(lineText);
                     const startWeight = totalSpeechWeight;
-                    totalSpeechWeight += weight;
+                    totalSpeechWeight += parsed.totalWeight;
 
                     const paraObj = {
                         index: paraIdx++,
@@ -1445,6 +1474,8 @@
                         textLower: lineText.toLowerCase().replace(/\s+/g, ' '),
                         startWeight: startWeight,
                         endWeight: totalSpeechWeight,
+                        tokens: parsed.tokens,
+                        totalTokenWeight: parsed.totalWeight,
                         hasFlag: false,
                         flagTime: 0
                     };
