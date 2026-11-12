@@ -268,12 +268,12 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-        .reader-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .reader-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
         .reader-btn {
             background-color: #2d2e3a;
             color: #fff;
             border: none;
-            padding: 5px 10px;
+            padding: 6px 10px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 12.5px;
@@ -285,6 +285,78 @@
             background-color: var(--accent-yellow);
             color: #000;
         }
+
+        /* THANH NHẬP KHỚP VỊ TRÍ ĐỌC */
+        .sync-anchor-bar {
+            display: none;
+            background-color: #161822;
+            border-bottom: 1px solid #2e303e;
+            padding: 12px 15px;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .sync-anchor-bar.show { display: flex; }
+        .sync-anchor-bar input {
+            flex: 1;
+            min-width: 200px;
+            background-color: #0f1015;
+            border: 1px solid #3f4152;
+            color: #fff;
+            padding: 7px 12px;
+            border-radius: 5px;
+            font-size: 13px;
+            outline: none;
+        }
+        .sync-anchor-bar input:focus { border-color: var(--accent-yellow); }
+        .btn-anchor-go {
+            background-color: var(--accent-yellow);
+            color: #000;
+            border: none;
+            padding: 7px 14px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 12.5px;
+            cursor: pointer;
+        }
+        .btn-anchor-next {
+            background-color: #2d2e3a;
+            color: #e2e8f0;
+            border: 1px solid #3f4152;
+            padding: 7px 12px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 12.5px;
+            cursor: pointer;
+        }
+        .btn-anchor-next:hover { background-color: #3f4152; }
+        .sync-status-msg {
+            width: 100%;
+            font-size: 12px;
+            color: #93c5fd;
+            margin-top: 2px;
+        }
+        .speed-adjust-group {
+            display: inline-flex;
+            align-items: center;
+            background-color: #252630;
+            border-radius: 4px;
+            padding: 2px 6px;
+            gap: 5px;
+            font-size: 12px;
+            color: #cbd5e1;
+        }
+        .speed-adjust-group button {
+            background: #3f4152;
+            border: none;
+            color: #fff;
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
         .reader-content {
             padding: 25px;
             max-height: 550px;
@@ -298,14 +370,18 @@
         .reader-content::-webkit-scrollbar { width: 8px; }
         .reader-content::-webkit-scrollbar-thumb { background: #3f4152; border-radius: 4px; }
         .reader-para {
-            margin: 0 0 12px 0;
+            margin: 0 0 10px 0;
             padding: 6px 10px;
             border-radius: 6px;
             border-left: 3px solid transparent;
-            transition: background-color 0.25s, color 0.25s, border-color 0.25s;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+        .reader-para:hover {
+            background-color: rgba(255, 255, 255, 0.04);
         }
         .reader-para.reading-active {
-            background-color: rgba(234, 179, 8, 0.14);
+            background-color: rgba(234, 179, 8, 0.16);
             border-left-color: var(--accent-yellow);
             color: #ffffff;
         }
@@ -610,13 +686,28 @@
                     <div class="reader-toolbar">
                         <span id="readerFileName" style="color: var(--accent-yellow); font-weight: bold; font-size: 13.5px;">Đang tải...</span>
                         <div class="reader-controls">
+                            <button class="reader-btn" style="background-color: #2563eb;" onclick="toggleSyncAnchorBar()">📍 Khớp vị trí</button>
                             <button class="reader-btn active-sync" id="btnAutoSync" onclick="toggleAutoSync()">🔄 Tự cuộn: BẬT</button>
-                            <button class="reader-btn" onclick="nhayToiViTriDangDoc()" title="Cuộn ngay đến đoạn đang phát">🎯 Tới đoạn đọc</button>
+                            <div class="speed-adjust-group" title="Tốc độ chữ chạy (ký tự/giây)">
+                                <span>Nhịp:</span>
+                                <button onclick="dieuChinhNhipDoc(-1)">-</button>
+                                <span id="charsPerSecLabel">15</span>
+                                <button onclick="dieuChinhNhipDoc(1)">+</button>
+                            </div>
                             <button class="reader-btn" onclick="doiCoChu(-2)">A-</button>
                             <button class="reader-btn" onclick="doiCoChu(2)">A+</button>
                             <button class="reader-btn" style="background-color: #ef4444;" onclick="dongKhungDoc()">✕ Đóng</button>
                         </div>
                     </div>
+
+                    <!-- THANH NHẬP SỐ CHƯƠNG HOẶC CÂU ĐANG ĐỌC ĐỂ KHỚP MỐC -->
+                    <div class="sync-anchor-bar show" id="syncAnchorBar">
+                        <input type="text" id="anchorSearchInput" placeholder="Nhập số chương (vd: Chương 12) hoặc 1 câu đang nghe để khớp..." onkeydown="if(event.key==='Enter') timVaKhopMoc()">
+                        <button class="btn-anchor-go" onclick="timVaKhopMoc()">🎯 Khớp ngay</button>
+                        <button class="btn-anchor-next" id="btnAnchorNext" style="display:none;" onclick="chuyenKetQuaKhopTiepTheo()">Tiếp theo ⏭</button>
+                        <div class="sync-status-msg" id="syncStatusMsg">💡 Mẹo: Gõ số chương hoặc 1 cụm từ đang nghe rồi bấm "Khớp ngay" (hoặc bấm trực tiếp vào đoạn chữ bên dưới) để đồng bộ.</div>
+                    </div>
+
                     <div class="reader-content" id="readerContent">Đang tải nội dung từ máy chủ...</div>
                 </div>
             </div>
@@ -698,44 +789,169 @@
             savedData = {};
         }
 
-        /* TÍNH TOÁN THỜI LƯỢNG TỪNG TẬP ĐỂ ĐỒNG BỘ TEXT */
+        /* BIẾN ĐỒNG BỘ TEXT THEO MỐC NEO (ANCHOR) */
         const allChapterItems = Array.from(document.querySelectorAll('.chapter-item'));
         const chapterDurations = allChapterItems.map(el => parseFloat(el.getAttribute('data-duration')) || 0);
         const hasValidDurations = chapterDurations.length > 0 && chapterDurations.every(d => d > 0);
         const totalSeriesDuration = hasValidDurations ? chapterDurations.reduce((a, b) => a + b, 0) : 0;
 
-        let paragraphMap = []; // Lưu { el, startChar, endChar }
+        let paragraphMap = []; // { el, textLower, startChar, endChar }
         let totalTextChars = 0;
         let autoSyncEnabled = true;
         let lastActiveParaEl = null;
 
-        function tinhTyLeTienDoToanTruyen() {
-            if (!currentItem || allChapterItems.length === 0) return 0;
-            const idx = parseInt(currentItem.getAttribute('data-index')) || 0;
-            const curTime = player.currentTime || 0;
-            const curDur = player.duration || chapterDurations[idx] || 1;
+        // Tốc độ đọc cơ sở ở mức 1.0x (ký tự/giây) - người dùng có thể chỉnh +/-
+        let baseCharsPerSec = parseFloat(localStorage.getItem('nghetruyen_cps') || '15');
+        let syncAnchor = null; // { chapterIndex, audioTime, charPos }
+        let searchMatches = [];
+        let searchMatchCursor = 0;
 
+        function getAnchorStorageKey() {
+            const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
+            return `txt_anchor_${encodeURIComponent(currentThuMuc)}_ep_${idx}`;
+        }
+
+        function taiLaiMocDaLuuChoTapHienTai() {
+            try {
+                const raw = localStorage.getItem(getAnchorStorageKey());
+                syncAnchor = raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                syncAnchor = null;
+            }
+        }
+
+        function datMocTaiDoanVan(paraObj, customMsg = null) {
+            if (!paraObj) return;
+            const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
+            syncAnchor = {
+                chapterIndex: idx,
+                audioTime: player.currentTime || 0,
+                charPos: paraObj.startChar
+            };
+            try {
+                localStorage.setItem(getAnchorStorageKey(), JSON.stringify(syncAnchor));
+            } catch (e) {}
+
+            highlightVaCuonDenPara(paraObj.el, true);
+
+            const statusEl = document.getElementById('syncStatusMsg');
+            if (statusEl) {
+                const preview = paraObj.el.textContent.slice(0, 45) + (paraObj.el.textContent.length > 45 ? '...' : '');
+                statusEl.innerText = customMsg || `✅ Đã khớp mốc tại giây ${formatTime(syncAnchor.audioTime)}: "${preview}"`;
+            }
+        }
+
+        function timVaKhopMoc() {
+            const inputEl = document.getElementById('anchorSearchInput');
+            const statusEl = document.getElementById('syncStatusMsg');
+            const nextBtn = document.getElementById('btnAnchorNext');
+            const rawQuery = (inputEl?.value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+            if (!rawQuery) {
+                statusEl.innerText = "⚠️ Vui lòng nhập số chương (vd: Chương 10) hoặc vài từ đang nghe.";
+                return;
+            }
+            if (paragraphMap.length === 0) {
+                statusEl.innerText = "⚠️ Dữ liệu văn bản chưa tải xong.";
+                return;
+            }
+
+            searchMatches = paragraphMap.filter(p => p.textLower.includes(rawQuery));
+            searchMatchCursor = 0;
+
+            if (searchMatches.length === 0) {
+                nextBtn.style.display = 'none';
+                statusEl.innerText = `❌ Không tìm thấy "${inputEl.value}" trong văn bản. Thử gõ cụm từ ngắn hơn hoặc không dấu câu.`;
+                return;
+            }
+
+            nextBtn.style.display = searchMatches.length > 1 ? 'inline-block' : 'none';
+            const chosen = searchMatches[0];
+            const infoExtra = searchMatches.length > 1
+                ? ` (Tìm thấy ${searchMatches.length} kết quả — bấm "Tiếp theo ⏭" nếu chưa đúng đoạn)`
+                : '';
+            datMocTaiDoanVan(
+                chosen,
+                `✅ Đã khớp tại giây ${formatTime(player.currentTime || 0)}${infoExtra}`
+            );
+        }
+
+        function chuyenKetQuaKhopTiepTheo() {
+            if (searchMatches.length <= 1) return;
+            searchMatchCursor = (searchMatchCursor + 1) % searchMatches.length;
+            const chosen = searchMatches[searchMatchCursor];
+            const statusEl = document.getElementById('syncStatusMsg');
+            datMocTaiDoanVan(
+                chosen,
+                `✅ Kết quả ${searchMatchCursor + 1}/${searchMatches.length} — Đã khớp tại giây ${formatTime(player.currentTime || 0)}`
+            );
+        }
+
+        function dieuChinhNhipDoc(delta) {
+            baseCharsPerSec = Math.max(6, Math.min(30, baseCharsPerSec + delta));
+            localStorage.setItem('nghetruyen_cps', baseCharsPerSec.toString());
+            const label = document.getElementById('charsPerSecLabel');
+            if (label) label.innerText = baseCharsPerSec;
+            dongBoViTriText(true);
+        }
+
+        function toggleSyncAnchorBar() {
+            const bar = document.getElementById('syncAnchorBar');
+            if (bar) {
+                bar.classList.toggle('show');
+                if (bar.classList.contains('show')) {
+                    document.getElementById('anchorSearchInput')?.focus();
+                }
+            }
+        }
+
+        function tinhViTriKyTuHienTai() {
+            const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
+            const curTime = player.currentTime || 0;
+
+            // 1. Ưu tiên tính từ mốc neo (Anchor) đã khớp nếu có
+            if (syncAnchor && syncAnchor.chapterIndex === idx) {
+                const deltaSeconds = curTime - syncAnchor.audioTime;
+                const pos = syncAnchor.charPos + (deltaSeconds * baseCharsPerSec);
+                return Math.max(0, Math.min(totalTextChars, Math.floor(pos)));
+            }
+
+            // 2. Nếu chưa neo mốc bao giờ, ước lượng ban đầu theo tỷ lệ thời lượng tập
+            const curDur = player.duration || chapterDurations[idx] || 1;
+            let ratio = 0;
             if (hasValidDurations && totalSeriesDuration > 0) {
                 let elapsedBefore = 0;
                 for (let i = 0; i < idx; i++) {
                     elapsedBefore += chapterDurations[i];
                 }
-                const effectiveCur = Math.min(curTime, chapterDurations[idx]);
-                return Math.max(0, Math.min(1, (elapsedBefore + effectiveCur) / totalSeriesDuration));
+                ratio = (elapsedBefore + Math.min(curTime, chapterDurations[idx])) / totalSeriesDuration;
             } else {
-                // Fallback nếu Archive chưa kịp trả về metadata duration của toàn bộ các tập
-                const chapProgress = Math.min(1, curTime / curDur);
-                return Math.max(0, Math.min(1, (idx + chapProgress) / allChapterItems.length));
+                ratio = (idx + Math.min(1, curTime / curDur)) / Math.max(1, allChapterItems.length);
+            }
+            return Math.max(0, Math.min(totalTextChars, Math.floor(ratio * totalTextChars)));
+        }
+
+        function highlightVaCuonDenPara(el, forceScroll = false) {
+            if (!el) return;
+            if (el !== lastActiveParaEl) {
+                if (lastActiveParaEl) {
+                    lastActiveParaEl.classList.remove('reading-active');
+                }
+                el.classList.add('reading-active');
+                lastActiveParaEl = el;
+                if (autoSyncEnabled || forceScroll) {
+                    cuonGiuaKhungDoc(el);
+                }
+            } else if (forceScroll) {
+                cuonGiuaKhungDoc(el);
             }
         }
 
         function dongBoViTriText(forceScroll = false) {
             if (paragraphMap.length === 0 || totalTextChars === 0) return;
 
-            const ratio = tinhTyLeTienDoToanTruyen();
-            const targetChar = Math.floor(ratio * totalTextChars);
+            const targetChar = tinhViTriKyTuHienTai();
 
-            // Tìm đoạn văn chứa mốc targetChar (Binary Search)
             let left = 0;
             let right = paragraphMap.length - 1;
             let matched = paragraphMap[0];
@@ -754,18 +970,8 @@
                 }
             }
 
-            if (matched && matched.el !== lastActiveParaEl) {
-                if (lastActiveParaEl) {
-                    lastActiveParaEl.classList.remove('reading-active');
-                }
-                matched.el.classList.add('reading-active');
-                lastActiveParaEl = matched.el;
-
-                if (autoSyncEnabled || forceScroll) {
-                    cuonGiuaKhungDoc(matched.el);
-                }
-            } else if (forceScroll && matched) {
-                cuonGiuaKhungDoc(matched.el);
+            if (matched) {
+                highlightVaCuonDenPara(matched.el, forceScroll);
             }
         }
 
@@ -790,10 +996,6 @@
                 btn.classList.remove('active-sync');
                 btn.innerText = '⏸ Tự cuộn: TẮT';
             }
-        }
-
-        function nhayToiViTriDangDoc() {
-            dongBoViTriText(true);
         }
 
         function formatTime(seconds) {
@@ -848,6 +1050,7 @@
             capNhatLichSuToanCuc(chapterName);
             dongPopup();
 
+            taiLaiMocDaLuuChoTapHienTai();
             if (document.getElementById('readerContainer')?.style.display === 'block') {
                 dongBoViTriText(true);
             }
@@ -922,6 +1125,9 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
+            const cpsLabel = document.getElementById('charsPerSecLabel');
+            if (cpsLabel) cpsLabel.innerText = baseCharsPerSec;
+
             if (savedData.link && savedData.currentTime > 5) {
                 const popup = document.getElementById('resume-popup');
                 document.getElementById('popup-chapter-name').innerText = savedData.chapterName || "Chương trước";
@@ -937,7 +1143,7 @@
             }
         });
 
-        /* TÍNH NĂNG ĐỌC FILE TEXT & ĐỒNG BỘ TỪ ARCHIVE.ORG */
+        /* TÍNH NĂNG ĐỌC FILE TEXT & KHỚP VỊ TRÍ TỪ ARCHIVE.ORG */
         let currentFontSize = 17;
 
         async function docTruyenChu(archiveId, fileName, displayTitle) {
@@ -947,14 +1153,15 @@
 
             container.style.display = 'block';
             titleBox.innerText = "📖 " + displayTitle;
-            contentBox.innerHTML = "<div style='color:var(--text-muted);'>⏳ Đang tải và đồng bộ dữ liệu văn bản từ Internet Archive, vui lòng chờ giây lát...</div>";
+            contentBox.innerHTML = "<div style='color:var(--text-muted);'>⏳ Đang tải dữ liệu văn bản từ Internet Archive, vui lòng chờ giây lát...</div>";
             container.scrollIntoView({ behavior: 'smooth' });
+
+            taiLaiMocDaLuuChoTapHienTai();
 
             try {
                 const res = await fetch(`/api/archive-text/${encodeURIComponent(archiveId)}/${encodeURIComponent(fileName)}`);
                 const rawText = (await res.text()).normalize('NFC');
 
-                // Tách văn bản thành từng đoạn <p> và đánh dấu chỉ số ký tự tích lũy
                 const lines = rawText.split(/\r?\n/);
                 paragraphMap = [];
                 totalTextChars = 0;
@@ -968,21 +1175,29 @@
                     const p = document.createElement('p');
                     p.className = 'reader-para';
                     p.textContent = lineText;
-                    fragment.appendChild(p);
 
                     const startChar = totalTextChars;
                     totalTextChars += lineText.length;
-                    paragraphMap.push({
+
+                    const paraObj = {
                         el: p,
+                        textLower: lineText.toLowerCase().replace(/\s+/g, ' '),
                         startChar: startChar,
                         endChar: totalTextChars
-                    });
+                    };
+
+                    // Cho phép bấm trực tiếp vào bất kỳ đoạn văn nào để khớp mốc ngay tại đó
+                    p.onclick = function() {
+                        datMocTaiDoanVan(paraObj);
+                    };
+
+                    fragment.appendChild(p);
+                    paragraphMap.push(paraObj);
                 }
 
                 contentBox.innerHTML = '';
                 contentBox.appendChild(fragment);
 
-                // Nhảy ngay tới vị trí tương ứng với giây audio đang phát
                 dongBoViTriText(true);
             } catch (err) {
                 contentBox.innerText = "✖ Lỗi kết nối khi tải nội dung văn bản.";
