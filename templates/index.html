@@ -308,11 +308,12 @@
             background: #3f4152;
             border: none;
             color: #fff;
-            width: 20px;
+            width: 22px;
             height: 20px;
             border-radius: 3px;
             cursor: pointer;
             font-weight: bold;
+            font-size: 11.5px;
         }
         .speed-tuner button:hover { background: #52556b; }
 
@@ -752,8 +753,14 @@
                             <div class="speed-tuner" title="Tinh chỉnh nhịp chữ chạy (từ/giây audio)">
                                 <span>Nhịp:</span>
                                 <button onclick="tinhChinhNhip(-0.2)">-</button>
-                                <span id="wpsDisplay">4.2</span>
+                                <span id="wpsDisplay">4.5</span>
                                 <button onclick="tinhChinhNhip(0.2)">+</button>
+                            </div>
+                            <div class="speed-tuner" title="Dịch pha dải chữ vàng sớm/trễ so với tiếng đọc">
+                                <span>Pha:</span>
+                                <button onclick="dichPhaText(-0.5)">-0.5s</button>
+                                <span id="phaseOffsetDisplay">0.0s</span>
+                                <button onclick="dichPhaText(0.5)">+0.5s</button>
                             </div>
                             <button class="reader-btn" onclick="toggleSyncAnchorBar()" title="Ẩn/hiện thanh tìm kiếm & quản lý cờ">🔍 Tìm</button>
                             <button class="reader-btn" onclick="doiCoChu(-2)">A-</button>
@@ -768,7 +775,7 @@
                         <button class="btn-anchor-go" onclick="timVaKhopMoc()">🎯 Tìm & Cắm cờ</button>
                         <button class="btn-anchor-next" id="btnAnchorNext" style="display:none;" onclick="chuyenKetQuaKhopTiepTheo()">Tiếp theo ⏭</button>
                         <button class="btn-clear-flags" id="btnClearFlags" style="display:none;" onclick="xoaTatCaCo()">🗑️ Xóa cờ (0)</button>
-                        <div class="sync-status-msg" id="syncStatusMsg">💡 Dải màu vàng tự ngắt nghỉ theo dấu <b>,</b> và <b>.</b> giống giọng đọc. Bấm <b>-</b> / <b>+</b> ở ô <b>Nhịp</b> để chỉnh nhanh chậm bất cứ lúc nào.</div>
+                        <div class="sync-status-msg" id="syncStatusMsg">💡 Dải màu vàng tự ngắt nghỉ theo dấu <b>,</b> <b>.</b> <b>...</b> <b>——</b> và ngoặc thoại. Dùng nút <b>Pha -0.5s/+0.5s</b> để kéo khớp ngay với tiếng đọc.</div>
                     </div>
 
                     <div class="reader-content" id="readerContent">Đang tải nội dung từ máy chủ...</div>
@@ -857,13 +864,13 @@
             return raw.split("#")[0].trim().toLowerCase();
         }
 
-        /* HỆ THỐNG ĐỒNG BỘ TEXT & TÔ MÀU NGẮT NGHỈ THEO DẤU CÂU */
+        /* HỆ THỐNG ĐỒNG BỘ TEXT & PHÂN CẤP DẤU NGẮT NGHỈ CHI TIẾT */
         const allChapterItems = Array.from(document.querySelectorAll('.chapter-item'));
         const chapterDurations = allChapterItems.map(el => parseFloat(el.getAttribute('data-duration')) || 0);
         const hasValidDurations = chapterDurations.length > 0 && chapterDurations.every(d => d > 0);
         const totalSeriesDuration = hasValidDurations ? chapterDurations.reduce((a, b) => a + b, 0) : 0;
 
-        let paragraphMap = []; // { index, el, rawText, textLower, startWeight, endWeight, tokens, totalTokenWeight, hasFlag, flagTime }
+        let paragraphMap = [];
         let totalSpeechWeight = 0;
         let autoSyncEnabled = true;
         let lastActiveParaObj = null;
@@ -872,16 +879,26 @@
         let episodeFlags = [];
         let searchMatches = [];
         let searchMatchCursor = 0;
+        let phaseOffsetSec = 0.0;
 
-        const storyWpsStorageKey = `txt_story_wps_v3_${encodeURIComponent(layTenChuan(currentThuMuc))}`;
-        let calibratedWps = parseFloat(localStorage.getItem(storyWpsStorageKey) || '4.2');
+        const storyWpsStorageKey = `txt_story_wps_v4_${encodeURIComponent(layTenChuan(currentThuMuc))}`;
+        let calibratedWps = parseFloat(localStorage.getItem(storyWpsStorageKey) || '4.5');
 
         /**
-         * Phân tích từng đoạn văn thành danh sách các token (từ + khoảng trắng + dấu ngắt câu)
-         * để cả bộ đếm tổng lẫn hiệu ứng tô màu vàng đều dừng nghỉ đúng nhịp tại dấu , và .
+         * Phân tích chi tiết từng đoạn văn thành các token kèm trọng số ngắt nghỉ theo ngữ điệu:
+         * - Tiêu đề chương / dòng phân cách cảnh (***, ---): nghỉ chuyển cảnh dài (+5.0)
+         * - Dấu ba chấm (... / ……) & gạch ngang dài (—— / --): nghỉ ngập ngừng kéo dài (+3.8)
+         * - Dấu kết câu (. ! ?): nghỉ hết câu (+2.4)
+         * - Dấu ngắt vế & ngoặc thoại (, ; : “ ” "): nghỉ lấy hơi ngắn (+1.1)
+         * - Xuống dòng hết đoạn: (+2.2)
          */
         function phanTichTokenDoanVan(text) {
-            const parts = text.split(/(\s+)/);
+            const trimmed = text.trim();
+            // Kiểm tra dòng phân cách cảnh hoặc tiêu đề chương
+            const isSectionBreak = /^([*\-=_~•]{3,}|(chương|hồi|quyển|màn)\s+\d+.*)$/i.test(trimmed);
+
+            // Tách giữ lại khoảng trắng và tách riêng các cụm dấu câu đặc biệt để định vị chính xác
+            const parts = text.split(/(\s+|…+|\.{2,}|—{2,}|-{2,})/);
             const tokens = [];
             let accWeight = 0;
 
@@ -890,24 +907,38 @@
                 if (!part) continue;
 
                 if (/^\s+$/.test(part)) {
-                    // Khoảng trắng chỉ nối theo từ trước đó, không tốn thời gian riêng
+                    tokens.push({ str: part, endW: accWeight });
+                } else if (/^(…+|\.{2,}|—{2,}|-{2,})$/.test(part)) {
+                    // Dấu ba chấm hoặc gạch ngang kéo dài đứng độc lập
+                    accWeight += 3.8;
                     tokens.push({ str: part, endW: accWeight });
                 } else {
-                    // 1. Trọng số của bản thân từ được đọc
+                    // Từ thông thường (có thể dính dấu câu ở đầu hoặc cuối)
                     let w = 1.0;
-                    // 2. Trọng số nghỉ nếu cuối từ có dính dấu ngắt câu
-                    if (/[.!?…]+["”'’)\]]*$/.test(part)) {
-                        w += 2.3; // Nghỉ hết câu (~0.5s)
-                    } else if (/[,;:\-–—]+["”'’)\]]*$/.test(part)) {
-                        w += 1.1; // Nghỉ ngắt vế (~0.25s)
+
+                    // Ngoặc mở đầu lời thoại (" hoặc “ hoặc ()
+                    if (/^["“'‘(\[]/.test(part)) {
+                        w += 0.6;
                     }
+
+                    // Dấu ngắt ở cuối từ
+                    if (/(…+|\.{2,}|—{2,}|-{2,})["”'’)\]]*$/.test(part)) {
+                        w += 3.8; // Ba chấm / gạch dài dính liền cuối từ
+                    } else if (/[.!?]+["”'’)\]]*$/.test(part)) {
+                        w += 2.4; // Kết thúc câu
+                    } else if (/[,;:]+["”'’)\]]*$/.test(part)) {
+                        w += 1.1; // Ngắt vế câu
+                    } else if (/["”'’)\]]+$/.test(part)) {
+                        w += 0.8; // Đóng ngoặc thoại
+                    }
+
                     accWeight += w;
                     tokens.push({ str: part, endW: accWeight });
                 }
             }
 
-            // Cộng thêm nhịp nghỉ khi xuống dòng hết đoạn văn (~0.45s)
-            const totalWeightWithBreak = Math.max(1, accWeight + 2.0);
+            const endOfParaPause = isSectionBreak ? 5.0 : 2.2;
+            const totalWeightWithBreak = Math.max(1, accWeight + endOfParaPause);
             return {
                 tokens: tokens,
                 totalWeight: totalWeightWithBreak
@@ -926,12 +957,25 @@
             dongBoViTriText(true);
         }
 
+        function dichPhaText(deltaSec) {
+            phaseOffsetSec = Math.max(-30, Math.min(30, Math.round((phaseOffsetSec + deltaSec) * 10) / 10));
+            const el = document.getElementById('phaseOffsetDisplay');
+            if (el) {
+                el.innerText = (phaseOffsetSec > 0 ? '+' : '') + phaseOffsetSec.toFixed(1) + 's';
+            }
+            dongBoViTriText(true);
+        }
+
         function getFlagsStorageKey() {
             const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
-            return `txt_flags_v5_${encodeURIComponent(currentThuMuc)}_ep_${idx}`;
+            return `txt_flags_v6_${encodeURIComponent(currentThuMuc)}_ep_${idx}`;
         }
 
         function taiLaiDanhSachCo() {
+            phaseOffsetSec = 0.0;
+            const el = document.getElementById('phaseOffsetDisplay');
+            if (el) el.innerText = '0.0s';
+
             try {
                 const raw = localStorage.getItem(getFlagsStorageKey());
                 episodeFlags = raw ? JSON.parse(raw) : [];
@@ -988,7 +1032,8 @@
 
         function camCoTaiDoanVan(paraObj, customPrefix = null) {
             if (!paraObj) return;
-            const curAudioTime = player.currentTime || 0;
+            // Cộng thêm phaseOffsetSec hiện tại nếu người dùng đã chỉnh pha
+            const curAudioTime = Math.max(0, (player.currentTime || 0) + phaseOffsetSec);
 
             episodeFlags = episodeFlags.filter(f =>
                 Math.abs(f.audioTime - curAudioTime) >= 3 && f.paraIndex !== paraObj.index
@@ -999,6 +1044,11 @@
                 weightPos: paraObj.startWeight,
                 paraIndex: paraObj.index
             });
+
+            // Reset pha về 0 vì đã cắm mốc chính xác mới
+            phaseOffsetSec = 0.0;
+            const phaseEl = document.getElementById('phaseOffsetDisplay');
+            if (phaseEl) phaseEl.innerText = '0.0s';
 
             luuDanhSachCo();
             const measuredWps = doVaLuuTocDoTuCacCo();
@@ -1024,6 +1074,9 @@
 
         function xoaTatCaCo() {
             episodeFlags = [];
+            phaseOffsetSec = 0.0;
+            const phaseEl = document.getElementById('phaseOffsetDisplay');
+            if (phaseEl) phaseEl.innerText = '0.0s';
             luuDanhSachCo();
             const statusEl = document.getElementById('syncStatusMsg');
             if (statusEl) {
@@ -1046,7 +1099,6 @@
             if (localElapsedWeight === null) {
                 el.appendChild(document.createTextNode(paraObj.rawText));
             } else {
-                // Tô vàng các token có mốc endW <= localElapsedWeight -> tự dừng nghỉ ở dấu , và .
                 let spokenText = '';
                 let unspokenText = '';
                 for (let i = 0; i < paraObj.tokens.length; i++) {
@@ -1115,7 +1167,7 @@
 
         function tinhViTriTrongSoHienTai() {
             const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
-            const t = player.currentTime || 0;
+            const t = Math.max(0, (player.currentTime || 0) + phaseOffsetSec);
             const currentWps = calibratedWps;
 
             if (episodeFlags.length >= 2) {
@@ -1508,7 +1560,7 @@
         }
 
         function tua(giay) { player.currentTime += giay; }
-        let speeds = [1.0, 1.25, 1.5, 1.8, 2.0];
+        let speeds = [1.0, 1.25, 1.5, 1.6, 1.7, 1.8, 2.0];
         let speedIdx = 0;
         function doiTocDo() {
             speedIdx = (speedIdx + 1) % speeds.length;
