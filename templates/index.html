@@ -47,6 +47,8 @@
             flex-shrink: 0;
         }
         .logo {
+            display: block;
+            text-decoration: none;
             font-size: 24px;
             font-weight: 900;
             color: #ffffff;
@@ -68,6 +70,7 @@
             gap: 10px;
             transition: all 0.2s;
             margin-bottom: 4px;
+            text-decoration: none;
         }
         .nav-item:hover { background-color: var(--bg-element); color: var(--accent-yellow); }
         .nav-divider { height: 1px; background-color: var(--border-color); margin: 15px 0; }
@@ -395,6 +398,8 @@
             cursor: pointer;
             border-radius: 6px;
             transition: background 0.2s;
+            text-decoration: none;
+            color: inherit;
         }
         .top-item:hover { background-color: var(--bg-element); }
         .top-rank {
@@ -483,12 +488,12 @@
 <body>
     <div class="app-wrapper">
         <div class="sidebar">
-            <div class="logo" onclick="window.location.href='/'">NGHETRUYEN</div>
+            <a href="/" class="logo">NGHETRUYEN</a>
             <ul class="nav-list">
-                <li class="nav-item" onclick="window.location.href='/'">🏠 Home</li>
+                <li><a href="/" class="nav-item">🏠 Home</a></li>
                 <li class="nav-item" onclick="scrollToTags()">📚 Thể Loại</li>
                 <div class="nav-divider"></div>
-                <li class="nav-item" onclick="window.location.href='/'">👈 Quay lại Trang chủ</li>
+                <li><a href="/" class="nav-item">👈 Quay lại Trang chủ</a></li>
             </ul>
         </div>
         <div class="main-area">
@@ -627,7 +632,7 @@
             <div class="top-tuan-title">🔥 HOT</div>
             <div class="top-list">
                 {% for item in hot_list %}
-                    <div class="top-item" onclick="window.location.href='/ghi-nhan/{{ item.thu_muc_raw }}'">
+                    <a href="/ghi-nhan/{{ item.thu_muc_raw }}" class="top-item">
                         <div class="top-rank">{{ loop.index }}</div>
                         {% if item.anh_bia %}
                             <img src="{{ item.anh_bia }}" class="top-thumb" alt="Thumb">
@@ -638,7 +643,7 @@
                             <div class="top-name">{{ item.ten_hien_thi }}</div>
                             <div class="top-date">Truy cập: {{ item.luot_xem }} lần</div>
                         </div>
-                    </div>
+                    </a>
                 {% endfor %}
             </div>
         </div>

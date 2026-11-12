@@ -46,6 +46,8 @@
             flex-shrink: 0;
         }
         .logo {
+            display: block;
+            text-decoration: none;
             font-size: 24px;
             font-weight: 900;
             color: #ffffff;
@@ -67,6 +69,7 @@
             gap: 10px;
             transition: all 0.2s;
             margin-bottom: 4px;
+            text-decoration: none;
         }
         .nav-item:hover, .nav-item.active {
             background-color: var(--bg-element);
@@ -237,6 +240,8 @@
             cursor: pointer;
             display: flex;
             flex-direction: column;
+            text-decoration: none;
+            color: inherit;
         }
         .card-truyen:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5); border-color: var(--accent-yellow); }
         .cover-img {
@@ -254,6 +259,58 @@
         .story-name { color: #ffffff; font-size: 15px; font-weight: 600; text-decoration: none; margin-bottom: 8px; display: block; }
         .card-tags { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; }
         .mini-tag { background-color: #141417; color: var(--accent-yellow); font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 1px solid #333; }
+
+        /* THANH PHÂN TRANG */
+        .pagination-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .page-btn {
+            background-color: var(--bg-element);
+            color: #cbd5e1;
+            border: 1px solid #353746;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 38px;
+        }
+        .page-btn:hover:not(:disabled) {
+            background-color: #3f4152;
+            color: var(--accent-yellow);
+            border-color: var(--accent-yellow);
+        }
+        .page-btn.active {
+            background-color: var(--accent-yellow);
+            color: #000000;
+            border-color: var(--accent-yellow);
+            font-weight: 700;
+        }
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .page-ellipsis {
+            color: var(--text-muted);
+            padding: 0 4px;
+            font-size: 14px;
+        }
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
         .sidebar-right {
             width: 310px;
             background-color: var(--bg-sidebar);
@@ -283,6 +340,8 @@
             cursor: pointer;
             border-radius: 6px;
             transition: background 0.2s;
+            text-decoration: none;
+            color: inherit;
         }
         .top-item:hover { background-color: var(--bg-element); }
         .top-rank {
@@ -319,13 +378,13 @@
 <body>
     <div class="app-wrapper">
         <div class="sidebar">
-            <div class="logo" onclick="window.location.href='/'">NGHETRUYEN</div>
+            <a href="/" class="logo">NGHETRUYEN</a>
             <ul class="nav-list">
-                <li class="nav-item active" onclick="locTheoTag('all', this)">🏠 Home</li>
-                <li class="nav-item" onclick="locTheoTag('all', this)">📚 Tất Cả Truyện</li>
+                <li><a href="/" class="nav-item active" onclick="if(!event.ctrlKey && !event.metaKey){ event.preventDefault(); locTheoTag('all', this); }">🏠 Home</a></li>
+                <li><a href="/" class="nav-item" onclick="if(!event.ctrlKey && !event.metaKey){ event.preventDefault(); locTheoTag('all', this); }">📚 Tất Cả Truyện</a></li>
                 <div class="nav-divider"></div>
                 {% for tag in danh_sach_tags %}
-                    <li class="nav-item" onclick="locTheoTag('{{ tag }}', this)">🏷️ {{ tag | replace('#', '') | title }}</li>
+                    <li><a href="/?tag={{ tag | urlencode }}" class="nav-item" onclick="if(!event.ctrlKey && !event.metaKey){ event.preventDefault(); locTheoTag('{{ tag }}', this); }">🏷️ {{ tag | replace('#', '') | title }}</a></li>
                 {% endfor %}
             </ul>
         </div>
@@ -356,14 +415,14 @@
                 <div class="history-grid" id="historyGrid"></div>
             </div>
 
-            <div class="section-box">
+            <div class="section-box" id="storySectionBox">
                 <div class="section-header">
                     <div class="section-title" id="sectionTitle">🎲 Tất cả truyện</div>
                     <button class="btn-doi" onclick="xaoTronTruyen()">🔄 Đổi</button>
                 </div>
                 <div class="grid-truyen" id="storyGrid">
                     {% for truyen in danh_sach_truyen %}
-                        <div class="card-truyen" data-tags="{{ truyen.tags_str }}" onclick="window.location.href='/ghi-nhan/{{ truyen.thu_muc_raw }}'">
+                        <a href="/ghi-nhan/{{ truyen.thu_muc_raw }}" class="card-truyen" data-tags="{{ truyen.tags_str }}">
                             {% if truyen.anh_bia %}
                                 <img src="{{ truyen.anh_bia }}" alt="Bìa {{ truyen.ten_hien_thi }}" class="cover-img">
                             {% else %}
@@ -379,16 +438,19 @@
                                 </div>
                                 {% endif %}
                             </div>
-                        </div>
+                        </a>
                     {% endfor %}
                 </div>
+
+                <!-- THANH PHÂN TRANG -->
+                <div class="pagination-bar" id="paginationBar"></div>
             </div>
         </div>
         <div class="sidebar-right">
             <div class="top-tuan-title">🔥 HOT</div>
             <div class="top-list">
                 {% for item in hot_list %}
-                    <div class="top-item" onclick="window.location.href='/ghi-nhan/{{ item.thu_muc_raw }}'">
+                    <a href="/ghi-nhan/{{ item.thu_muc_raw }}" class="top-item">
                         <div class="top-rank">{{ loop.index }}</div>
                         {% if item.anh_bia %}
                             <img src="{{ item.anh_bia }}" class="top-thumb" alt="Thumb">
@@ -399,12 +461,16 @@
                             <div class="top-name">{{ item.ten_hien_thi }}</div>
                             <div class="top-date">Truy cập: {{ item.luot_xem }} lần</div>
                         </div>
-                    </div>
+                    </a>
                 {% endfor %}
             </div>
         </div>
     </div>
     <script>
+        const ITEMS_PER_PAGE = 12;
+        let currentPage = 1;
+        let activeTag = 'all';
+
         document.addEventListener("DOMContentLoaded", function() {
             hienThiLichSu();
 
@@ -412,11 +478,19 @@
             const tagParam = urlParams.get('tag');
             if (tagParam) {
                 const allTagElements = document.querySelectorAll('.tag-item, .nav-item');
+                let matched = false;
                 allTagElements.forEach(el => {
                     if (el.innerText.toLowerCase().includes(tagParam.toLowerCase())) {
                         locTheoTag(tagParam, el);
+                        matched = true;
                     }
                 });
+                if (!matched) {
+                    activeTag = tagParam;
+                    capNhatPhanTrang(false);
+                }
+            } else {
+                capNhatPhanTrang(false);
             }
         });
 
@@ -428,17 +502,14 @@
         function hienThiLichSu() {
             const rawData = localStorage.getItem('nghetruyen_history');
             if (!rawData) return;
-
             let historyList = [];
             try {
                 historyList = JSON.parse(rawData);
             } catch (e) {
                 return;
             }
-
             if (!Array.isArray(historyList) || historyList.length === 0) return;
 
-            // Tự động làm sạch các bản ghi trùng tên gốc, ưu tiên bản ghi có ảnh bìa
             const uniqueMap = new Map();
             for (const item of historyList) {
                 const baseName = layTenChuan(item.thu_muc_raw);
@@ -458,17 +529,14 @@
             const box = document.getElementById('historyBox');
             const grid = document.getElementById('historyGrid');
             grid.innerHTML = '';
-
             historyList.forEach(item => {
                 const card = document.createElement('a');
                 card.className = 'history-card';
                 card.href = `/ghi-nhan/${encodeURIComponent(item.thu_muc_raw)}`;
-
                 const imgSrc = item.anh_bia ? item.anh_bia : '';
                 const imgHtml = imgSrc
                     ? `<img src="${imgSrc}" class="history-thumb" alt="Thumb" onerror="this.style.display='none'">`
                     : `<div class="history-thumb" style="display:flex;align-items:center;justify-content:center;color:#64748b;font-size:11px;">No cover</div>`;
-
                 card.innerHTML = `
                     ${imgHtml}
                     <div class="history-info">
@@ -478,7 +546,6 @@
                 `;
                 grid.appendChild(card);
             });
-
             box.style.display = 'block';
         }
 
@@ -490,50 +557,158 @@
             }
         }
 
+        function capNhatPhanTrang(scrollToTop = true) {
+            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            const grid = document.getElementById('storyGrid');
+            const allCards = Array.from(grid.querySelectorAll('.card-truyen'));
+
+            const oldEmpty = grid.querySelector('.empty-state');
+            if (oldEmpty) oldEmpty.remove();
+
+            const matchedCards = allCards.filter(card => {
+                const title = card.querySelector('.story-name').innerText.toLowerCase();
+                const tags = (card.getAttribute('data-tags') || '').toLowerCase();
+                const matchTag = (activeTag === 'all') || tags.includes(activeTag.toLowerCase());
+                const matchKeyword = (!keyword) || title.includes(keyword) || tags.includes(keyword);
+                return matchTag && matchKeyword;
+            });
+
+            const totalItems = matchedCards.length;
+            const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIdx = startIdx + ITEMS_PER_PAGE;
+
+            allCards.forEach(card => card.style.display = 'none');
+            matchedCards.slice(startIdx, endIdx).forEach(card => {
+                card.style.display = 'flex';
+            });
+
+            if (totalItems === 0) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.className = 'empty-state';
+                emptyDiv.innerText = 'Không tìm thấy bộ truyện nào phù hợp.';
+                grid.appendChild(emptyDiv);
+            }
+
+            veThanhPhanTrang(totalPages);
+
+            if (scrollToTop) {
+                const sectionBox = document.getElementById('storySectionBox');
+                if (sectionBox) {
+                    sectionBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+        }
+
+        function veThanhPhanTrang(totalPages) {
+            const bar = document.getElementById('paginationBar');
+            bar.innerHTML = '';
+
+            if (totalPages <= 1) {
+                bar.style.display = 'none';
+                return;
+            }
+            bar.style.display = 'flex';
+
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'page-btn';
+            prevBtn.innerText = '« Trước';
+            prevBtn.disabled = (currentPage === 1);
+            prevBtn.onclick = () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    capNhatPhanTrang(true);
+                }
+            };
+            bar.appendChild(prevBtn);
+
+            const pagesToShow = [];
+            for (let i = 1; i <= totalPages; i++) {
+                if (
+                    i === 1 ||
+                    i === totalPages ||
+                    (i >= currentPage - 2 && i <= currentPage + 2)
+                ) {
+                    pagesToShow.push(i);
+                } else if (pagesToShow[pagesToShow.length - 1] !== '...') {
+                    pagesToShow.push('...');
+                }
+            }
+
+            pagesToShow.forEach(p => {
+                if (p === '...') {
+                    const span = document.createElement('span');
+                    span.className = 'page-ellipsis';
+                    span.innerText = '...';
+                    bar.appendChild(span);
+                } else {
+                    const btn = document.createElement('button');
+                    btn.className = 'page-btn' + (p === currentPage ? ' active' : '');
+                    btn.innerText = p;
+                    btn.onclick = () => {
+                        currentPage = p;
+                        capNhatPhanTrang(true);
+                    };
+                    bar.appendChild(btn);
+                }
+            });
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'page-btn';
+            nextBtn.innerText = 'Sau »';
+            nextBtn.disabled = (currentPage === totalPages);
+            nextBtn.onclick = () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    capNhatPhanTrang(true);
+                }
+            };
+            bar.appendChild(nextBtn);
+        }
+
         function locTheoTag(tagCanTim, element) {
             document.querySelectorAll('.tag-item, .nav-item').forEach(el => el.classList.remove('active'));
             if (element) element.classList.add('active');
+            activeTag = tagCanTim;
+            currentPage = 1;
             const titleEl = document.getElementById('sectionTitle');
             if (titleEl) {
                 titleEl.innerText = tagCanTim === 'all' ? '🎲 Tất cả truyện' : '🏷️ Truyện có tag: ' + tagCanTim;
             }
-            const cards = document.querySelectorAll('.card-truyen');
-            cards.forEach(card => {
-                const tagsCuaTruyen = card.getAttribute('data-tags') || '';
-                if (tagCanTim === 'all' || tagsCuaTruyen.toLowerCase().includes(tagCanTim.toLowerCase())) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+            capNhatPhanTrang(false);
         }
 
         function locTruyen() {
-            const input = document.getElementById('searchInput').value.toLowerCase();
-            const cards = document.querySelectorAll('.card-truyen');
-            cards.forEach(card => {
-                const title = card.querySelector('.story-name').innerText.toLowerCase();
-                const tags = card.getAttribute('data-tags').toLowerCase();
-                if (title.includes(input) || tags.includes(input)) {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
+            currentPage = 1;
+            capNhatPhanTrang(false);
         }
 
         function xoaTimKiem() {
             document.getElementById('searchInput').value = '';
             const firstTag = document.querySelector('.tag-item');
-            if (firstTag) locTheoTag('all', firstTag);
+            if (firstTag) {
+                locTheoTag('all', firstTag);
+            } else {
+                activeTag = 'all';
+                currentPage = 1;
+                capNhatPhanTrang(false);
+            }
         }
 
         function xaoTronTruyen() {
             const grid = document.getElementById('storyGrid');
             if (!grid) return;
-            for (let i = grid.children.length; i >= 0; i--) {
-                grid.appendChild(grid.children[Math.random() * i | 0]);
+            const cards = Array.from(grid.querySelectorAll('.card-truyen'));
+            for (let i = cards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                grid.appendChild(cards[j]);
+                cards.splice(j, 1);
             }
+            currentPage = 1;
+            capNhatPhanTrang(false);
         }
     </script>
 </body>
