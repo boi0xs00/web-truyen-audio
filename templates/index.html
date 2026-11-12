@@ -281,11 +281,11 @@
             padding: 25px;
             max-height: 550px;
             overflow-y: auto;
-            color: #d1d5db;
+            color: #e2e8f0;
             font-size: 17px;
-            line-height: 1.8;
+            line-height: 1.85;
             white-space: pre-wrap;
-            font-family: Georgia, 'Times New Roman', Times, serif;
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
         }
         .reader-content::-webkit-scrollbar { width: 8px; }
         .reader-content::-webkit-scrollbar-thumb { background: #3f4152; border-radius: 4px; }
@@ -807,7 +807,7 @@
             try {
                 const res = await fetch(`/api/archive-text/${encodeURIComponent(archiveId)}/${encodeURIComponent(fileName)}`);
                 const text = await res.text();
-                contentBox.innerText = text;
+                contentBox.innerText = text.normalize('NFC');
 
                 const savedScroll = localStorage.getItem(currentTextScrollKey);
                 if (savedScroll) {

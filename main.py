@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import unicodedata
 import urllib.request
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, PlainTextResponse
@@ -39,13 +40,11 @@ def tim_anh_bia(duong_dan_thu_muc, thu_muc_raw):
         "cover.jpg", "cover.jpeg", "cover.png", "cover.webp",
         "Cover.jpg", "Cover.jpeg", "Cover.png", "Cover.webp"
     ]
-    # 1. Quét trực tiếp theo đường dẫn thư mục truyền vào
     if os.path.exists(duong_dan_thu_muc):
         for ten_file in cac_dinh_dang:
             if os.path.exists(os.path.join(duong_dan_thu_muc, ten_file)):
                 return f"/audio/{quote(thu_muc_raw)}/{ten_file}"
 
-    # 2. Quét dự phòng (fallback) nếu thu_muc_raw trong stats không khớp 100% với tên thư mục thực tế
     if os.path.exists("audio"):
         ten_chuan = thu_muc_raw.split("#")[0].strip().lower()
         for folder_name in os.listdir("audio"):
@@ -63,14 +62,11 @@ def lay_danh_sach_hot():
     if not os.path.exists("audio"):
         return []
 
-    # Danh sách thư mục thực tế đang có trên đĩa
     existing_folders = [f for f in os.listdir("audio") if os.path.isdir(os.path.join("audio", f))]
 
-    # 1. Lọc bỏ các thư mục đã bị xóa và gom nhóm truyện trùng tên gốc (trước dấu #)
     aggregated_stats = {}
     cleaned_stats = {}
     for folder_key, views in stats.items():
-        # Kiểm tra xem folder_key này có khớp với thư mục thực tế nào không
         matched_real_folder = None
         if folder_key in existing_folders:
             matched_real_folder = folder_key
@@ -81,7 +77,6 @@ def lay_danh_sach_hot():
                     matched_real_folder = ef
                     break
 
-        # Nếu thư mục còn tồn tại thực tế
         if matched_real_folder:
             cleaned_stats[folder_key] = views
             base_name = matched_real_folder.split("#")[0].strip().lower()
@@ -92,11 +87,9 @@ def lay_danh_sach_hot():
                 }
             aggregated_stats[base_name]["views"] += views
 
-    # Tự động đồng bộ dọn rác hot_stats.json nếu có truyện đã bị xóa khỏi ổ cứng
     if len(cleaned_stats) != len(stats):
         ghi_thong_ke(cleaned_stats)
 
-    # 2. Sắp xếp theo lượt xem giảm dần
     sorted_items = sorted(aggregated_stats.values(), key=lambda x: x["views"], reverse=True)[:5]
 
     hot_list = []
@@ -135,7 +128,6 @@ def lay_archive_identifier(raw_text, ten_sach_mac_dinh):
 
 
 def lay_tat_ca_truyen():
-    """Hàm phụ trợ lấy danh sách truyện toàn bộ hệ thống phục vụ gợi ý liên quan"""
     danh_sach = []
     if not os.path.exists("audio"):
         return danh_sach
@@ -200,7 +192,7 @@ async def ghi_nhan_luot_xem(thu_muc_raw: str):
 
 @app.get("/api/archive-text/{identifier}/{filename:path}", response_class=PlainTextResponse)
 async def lay_noi_dung_text_archive(identifier: str, filename: str):
-    """Proxy tải nội dung file .txt từ Internet Archive về trình duyệt để đọc trực tiếp"""
+    """Proxy tải nội dung file .txt từ Internet Archive và chuẩn hóa Unicode NFC"""
     url = f"https://archive.org/download/{quote(identifier)}/{quote(filename)}"
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -210,6 +202,10 @@ async def lay_noi_dung_text_archive(identifier: str, filename: str):
                 text = raw_bytes.decode('utf-8-sig')
             except UnicodeDecodeError:
                 text = raw_bytes.decode('utf-8', errors='replace')
+
+            # Gộp dấu tổ hợp (NFD) thành dựng sẵn (NFC) để tránh tách rời dấu thanh
+            text = unicodedata.normalize('NFC', text)
+
             return PlainTextResponse(content=text)
     except Exception as e:
         return PlainTextResponse(
@@ -255,7 +251,6 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
             data = json.loads(response.read().decode('utf-8'))
             files = data.get('files', [])
 
-            # 1. Lấy tất cả file MP3
             mp3_files = sorted([f['name'] for f in files if f.get('name', '').lower().endswith('.mp3')])
             for file_name in mp3_files:
                 ten_hien_thi = file_name.replace('.mp3', '').replace('-', ' ').title()
@@ -265,7 +260,6 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
                     "link": audio_link
                 })
 
-            # 2. Lấy tất cả file TXT (loại bỏ các file hệ thống _djvu.txt của Archive)
             txt_files = sorted([
                 f['name'] for f in files
                 if f.get('name', '').lower().endswith('.txt')
@@ -316,16 +310,13 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
 
     current_tags_set = set(tags_list)
 
-    # --- TÌM TRUYỆN CÙNG TAG CHO MỤC "CÓ THỂ BẠN QUAN TÂM" ---
     tat_ca = lay_tat_ca_truyen()
     truyen_lien_quan = []
     for tr in tat_ca:
         if tr["thu_muc_raw"] != thu_muc_that:
-            # Nếu có ít nhất 1 tag trùng nhau
             if set(tr["tags"]) & current_tags_set:
                 truyen_lien_quan.append(tr)
 
-    # Chọn ngẫu nhiên tối đa 6 truyện
     if len(truyen_lien_quan) > 6:
         truyen_lien_quan = random.sample(truyen_lien_quan, 6)
     else:
