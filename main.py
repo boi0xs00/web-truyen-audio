@@ -127,6 +127,24 @@ def lay_archive_identifier(raw_text, ten_sach_mac_dinh):
     return raw_text
 
 
+def parse_archive_length(length_val):
+    """Chuyển đổi trường length của Archive.org (giây hoặc HH:MM:SS) sang số thực (giây)"""
+    if not length_val:
+        return 0.0
+    try:
+        return float(length_val)
+    except ValueError:
+        try:
+            parts = [float(p) for p in str(length_val).split(':')]
+            if len(parts) == 3:
+                return parts[0] * 3600 + parts[1] * 60 + parts[2]
+            elif len(parts) == 2:
+                return parts[0] * 60 + parts[1]
+        except Exception:
+            pass
+    return 0.0
+
+
 def lay_tat_ca_truyen():
     danh_sach = []
     if not os.path.exists("audio"):
@@ -202,10 +220,7 @@ async def lay_noi_dung_text_archive(identifier: str, filename: str):
                 text = raw_bytes.decode('utf-8-sig')
             except UnicodeDecodeError:
                 text = raw_bytes.decode('utf-8', errors='replace')
-
-            # Gộp dấu tổ hợp (NFD) thành dựng sẵn (NFC) để tránh tách rời dấu thanh
             text = unicodedata.normalize('NFC', text)
-
             return PlainTextResponse(content=text)
     except Exception as e:
         return PlainTextResponse(
@@ -251,15 +266,24 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
             data = json.loads(response.read().decode('utf-8'))
             files = data.get('files', [])
 
-            mp3_files = sorted([f['name'] for f in files if f.get('name', '').lower().endswith('.mp3')])
-            for file_name in mp3_files:
+            # 1. Lấy tất cả file MP3 kèm thời lượng từng tập (length) để đồng bộ vị trí text
+            mp3_entries = sorted(
+                [f for f in files if f.get('name', '').lower().endswith('.mp3')],
+                key=lambda x: x.get('name', '')
+            )
+            for idx, f_obj in enumerate(mp3_entries):
+                file_name = f_obj['name']
+                duration_sec = parse_archive_length(f_obj.get('length'))
                 ten_hien_thi = file_name.replace('.mp3', '').replace('-', ' ').title()
                 audio_link = f"https://archive.org/download/{archive_identifier}/{quote(file_name)}"
                 danh_sach_chuong_url.append({
+                    "index": idx,
                     "ten_chuong": ten_hien_thi,
-                    "link": audio_link
+                    "link": audio_link,
+                    "duration": duration_sec
                 })
 
+            # 2. Lấy tất cả file TXT (loại bỏ các file hệ thống _djvu.txt của Archive)
             txt_files = sorted([
                 f['name'] for f in files
                 if f.get('name', '').lower().endswith('.txt')
@@ -278,8 +302,10 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
 
     if not danh_sach_chuong_url:
         danh_sach_chuong_url.append({
+            "index": 0,
             "ten_chuong": "Chương 1",
-            "link": f"https://archive.org/download/{archive_identifier}/chuong-001.mp3"
+            "link": f"https://archive.org/download/{archive_identifier}/chuong-001.mp3",
+            "duration": 0
         })
 
     tags_list = []
