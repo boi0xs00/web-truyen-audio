@@ -620,9 +620,11 @@
             padding: 10px 20px;
             z-index: 9999;
             align-items: center;
-            gap: 15px;
+            gap: 12px;
             color: #fff;
             animation: slideUp 0.3s ease-out;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         @keyframes slideUp {
             from { transform: translate(-50%, 50px); opacity: 0; }
@@ -645,7 +647,7 @@
             background-color: #3b82f6;
             color: white;
             border: none;
-            padding: 6px 16px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-weight: bold;
             font-size: 13px;
@@ -655,6 +657,20 @@
             gap: 5px;
         }
         .popup-btn-play:hover { background-color: #2563eb; }
+        .popup-btn-timer {
+            background-color: #10b981;
+            color: #000;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 5px;
+        }
+        .popup-btn-timer:hover { background-color: #059669; color: #fff; }
         .popup-btn-skip { background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer; }
         .popup-btn-skip:hover { color: #fff; }
         .popup-close { background: none; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer; margin-left: 5px; }
@@ -861,7 +877,8 @@
             <div class="title" id="popup-chapter-name">Tập...</div>
         </div>
         <div class="popup-time-badge" id="popup-time-text">00:00 / 00:00</div>
-        <button class="popup-btn-play" onclick="chapNhanTiepTuc()">▶ Tiếp tục</button>
+        <button class="popup-btn-play" onclick="chapNhanTiepTuc()">▶ Lúc tắt</button>
+        <button class="popup-btn-timer" id="btnResumeTimer" onclick="chapNhanTiepTucHenGio()">😴 Lúc hẹn giờ</button>
         <button class="popup-btn-skip" onclick="dongPopup()">Bỏ qua</button>
         <button class="popup-close" onclick="dongPopup()">✕</button>
     </div>
@@ -875,11 +892,20 @@
         const currentTenTruyen = "{{ ten_truyen }}";
         const currentAnhBia = "{{ anh_bia if anh_bia else '' }}";
         const storageKey = "audio_progress_v2_" + encodeURIComponent(currentThuMuc);
+        const timerCheckpointKey = "timer_checkpoint_" + encodeURIComponent(currentThuMuc);
+
         let savedData = {};
         try {
             savedData = JSON.parse(localStorage.getItem(storageKey) || '{}');
         } catch (e) {
             savedData = {};
+        }
+
+        let savedTimerCheckpoint = null;
+        try {
+            savedTimerCheckpoint = JSON.parse(localStorage.getItem(timerCheckpointKey) || 'null');
+        } catch (e) {
+            savedTimerCheckpoint = null;
         }
 
         function layTenChuan(raw) {
@@ -998,7 +1024,6 @@
                 episodeFlags = [];
             }
 
-            // Nếu tập mới chưa có cờ nào nhưng có mốc nối tiếp từ tập trước -> tự tạo cờ mốc 00:00
             if (episodeFlags.length === 0 && inheritedAnchor && inheritedAnchor.targetEpIndex === idx && paragraphMap.length > 0) {
                 let matchedIdx = 0;
                 for (let i = 0; i < paragraphMap.length; i++) {
@@ -1246,13 +1271,11 @@
                 return Math.max(0, Math.min(totalSpeechWeight, pos));
             }
 
-            // Ưu tiên nối tiếp vị trí kết thúc từ tập liền trước nếu tập mới chưa cắm cờ
             if (inheritedAnchor && inheritedAnchor.targetEpIndex === idx) {
                 const pos = inheritedAnchor.startWeight + t * currentWps;
                 return Math.max(0, Math.min(totalSpeechWeight, pos));
             }
 
-            // Fallback cuối cùng khi mở ngang một tập bất kỳ lần đầu
             const curDur = player.duration || chapterDurations[idx] || 1;
             let ratio = 0;
             if (hasValidDurations && totalSeriesDuration > 0) {
@@ -1499,23 +1522,62 @@
             }
         });
 
+        function phatTaiViTri(targetLink, targetTime) {
+            const items = document.querySelectorAll('.chapter-item');
+            let targetEl = null;
+            items.forEach(item => {
+                if (item.getAttribute('onclick').includes(targetLink)) {
+                    targetEl = item;
+                }
+            });
+            if (targetEl) {
+                let match = targetEl.getAttribute('onclick').match(/chonVaPhatChuongTeraBox\('(.*?)',\s*'(.*?)'/);
+                if (match) {
+                    chonVaPhatChuongTeraBox(match[1], match[2], targetEl);
+                    player.currentTime = targetTime;
+                    player.play().catch(e => console.log("Play blocked:", e));
+                    if (document.getElementById('readerContainer')?.style.display === 'block') {
+                        dongBoViTriText(true);
+                    }
+                }
+            }
+        }
+
         function chapNhanTiepTuc() {
             document.getElementById('resume-popup').style.display = 'none';
             if (pendingLink) {
-                const items = document.querySelectorAll('.chapter-item');
-                let targetEl = null;
-                items.forEach(item => {
-                    if (item.getAttribute('onclick').includes(pendingLink)) {
-                        targetEl = item;
+                phatTaiViTri(pendingLink, pendingTime);
+            }
+        }
+
+        async function chapNhanTiepTucHenGio() {
+            document.getElementById('resume-popup').style.display = 'none';
+            if (!savedTimerCheckpoint || !savedTimerCheckpoint.link) return;
+
+            const targetTime = savedTimerCheckpoint.currentTime || 0;
+            phatTaiViTri(savedTimerCheckpoint.link, targetTime);
+
+            // Nếu lúc hẹn giờ đang mở khung đọc text -> tự mở lại file text và khóa đúng mốc chữ
+            if (savedTimerCheckpoint.reader && savedTimerCheckpoint.reader.fileName) {
+                const r = savedTimerCheckpoint.reader;
+                await docTruyenChu(r.archiveId, r.fileName, r.displayTitle);
+
+                if (r.weightPos !== null && paragraphMap.length > 0) {
+                    let matchedIdx = 0;
+                    for (let i = 0; i < paragraphMap.length; i++) {
+                        if (paragraphMap[i].endWeight >= r.weightPos) {
+                            matchedIdx = i;
+                            break;
+                        }
                     }
-                });
-                if (targetEl) {
-                    let match = targetEl.getAttribute('onclick').match(/chonVaPhatChuongTeraBox\('(.*?)',\s*'(.*?)'/);
-                    if (match) {
-                        chonVaPhatChuongTeraBox(match[1], match[2], targetEl);
-                        player.currentTime = pendingTime;
-                        player.play().catch(e => console.log("Play blocked:", e));
-                    }
+                    episodeFlags = episodeFlags.filter(f => Math.abs(f.audioTime - targetTime) >= 3);
+                    episodeFlags.push({
+                        audioTime: targetTime,
+                        weightPos: r.weightPos,
+                        paraIndex: matchedIdx
+                    });
+                    luuDanhSachCo();
+                    dongBoViTriText(true);
                 }
             }
         }
@@ -1535,15 +1597,32 @@
             capNhatHienThiWps();
             batDauVongLapChayChu();
 
-            if (savedData.link && savedData.currentTime > 5) {
+            const hasNormalProgress = savedData.link && savedData.currentTime > 5;
+            const hasTimerCheckpoint = savedTimerCheckpoint && savedTimerCheckpoint.link;
+
+            if (hasNormalProgress || hasTimerCheckpoint) {
                 const popup = document.getElementById('resume-popup');
-                document.getElementById('popup-chapter-name').innerText = savedData.chapterName || "Chương trước";
-                player.src = savedData.link;
-                player.onloadedmetadata = function() {
-                    let curFormatted = formatTime(savedData.currentTime);
-                    let durFormatted = formatTime(player.duration);
-                    document.getElementById('popup-time-text').innerText = `${curFormatted} / ${durFormatted}`;
-                };
+                const timerBtn = document.getElementById('btnResumeTimer');
+
+                if (hasTimerCheckpoint && timerBtn) {
+                    timerBtn.style.display = 'flex';
+                    const hasTextIcon = savedTimerCheckpoint.reader ? ' 📖' : '';
+                    timerBtn.innerText = `😴 Lúc hẹn giờ (${formatTime(savedTimerCheckpoint.currentTime)})${hasTextIcon}`;
+                }
+
+                if (hasNormalProgress) {
+                    document.getElementById('popup-chapter-name').innerText = savedData.chapterName || "Chương trước";
+                    player.src = savedData.link;
+                    player.onloadedmetadata = function() {
+                        let curFormatted = formatTime(savedData.currentTime);
+                        let durFormatted = formatTime(player.duration);
+                        document.getElementById('popup-time-text').innerText = `${curFormatted} / ${durFormatted}`;
+                    };
+                } else {
+                    document.getElementById('popup-chapter-name').innerText = savedTimerCheckpoint.chapterName || "Mốc hẹn giờ";
+                    document.getElementById('popup-time-text').innerText = formatTime(savedTimerCheckpoint.currentTime);
+                }
+
                 popup.style.display = 'flex';
             } else {
                 dongPopup();
@@ -1552,6 +1631,7 @@
 
         /* TÍNH NĂNG ĐỌC FILE TEXT & CẮM CỜ ĐỒNG BỘ */
         let currentFontSize = 17;
+        let currentReaderMeta = null; // Lưu { archiveId, fileName, displayTitle } của file text đang mở
 
         async function docTruyenChu(archiveId, fileName, displayTitle) {
             const container = document.getElementById('readerContainer');
@@ -1559,6 +1639,7 @@
             const titleBox = document.getElementById('readerFileName');
 
             container.style.display = 'block';
+            currentReaderMeta = { archiveId, fileName, displayTitle };
             titleBox.innerText = "📖 " + displayTitle;
             contentBox.innerHTML = "<div style='color:var(--text-muted);'>⏳ Đang tải dữ liệu văn bản từ Internet Archive, vui lòng chờ giây lát...</div>";
             container.scrollIntoView({ behavior: 'smooth' });
@@ -1628,6 +1709,7 @@
 
         function dongKhungDoc() {
             document.getElementById('readerContainer').style.display = 'none';
+            currentReaderMeta = null;
         }
 
         function tua(giay) { player.currentTime += giay; }
@@ -1675,13 +1757,37 @@
                 statusEl.innerText = "Đã tắt hẹn giờ.";
                 return;
             }
+
+            let savedNote = "";
+            if (player.src && currentItem) {
+                const chapterName = currentItem.querySelector('span').innerText.replace('▶ ', '');
+                const isReaderOpen = document.getElementById('readerContainer')?.style.display === 'block';
+                const checkpoint = {
+                    link: player.src,
+                    chapterName: chapterName,
+                    currentTime: player.currentTime || 0,
+                    reader: (isReaderOpen && currentReaderMeta) ? {
+                        archiveId: currentReaderMeta.archiveId,
+                        fileName: currentReaderMeta.fileName,
+                        displayTitle: currentReaderMeta.displayTitle,
+                        weightPos: paragraphMap.length > 0 ? tinhViTriTrongSoHienTai() : null
+                    } : null
+                };
+                try {
+                    localStorage.setItem(timerCheckpointKey, JSON.stringify(checkpoint));
+                    savedTimerCheckpoint = checkpoint;
+                    const textTag = checkpoint.reader ? " + vị trí chữ" : "";
+                    savedNote = ` (Đã lưu mốc tại ${formatTime(checkpoint.currentTime)}${textTag})`;
+                } catch (e) {}
+            }
+
             let timeLeft = minutes * 60;
-            statusEl.innerText = `Sẽ tắt nhạc sau ${minutes} phút nữa.`;
+            statusEl.innerText = `Sẽ tắt nhạc sau ${minutes} phút nữa.${savedNote}`;
             timerInterval = setInterval(() => {
                 timeLeft--;
                 let m = Math.floor(timeLeft / 60);
                 let s = timeLeft % 60;
-                statusEl.innerText = `Còn lại: ${m}p ${s}s`;
+                statusEl.innerText = `Còn lại: ${m}p ${s}s${savedNote}`;
                 if (timeLeft <= 0) {
                     clearInterval(timerInterval);
                     player.pause();
