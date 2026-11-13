@@ -11,7 +11,6 @@ from urllib.parse import quote, urlparse
 import uvicorn
 
 app = FastAPI()
-
 if os.path.exists("audio"):
     app.mount("/audio", StaticFiles(directory="audio"), name="audio")
 
@@ -44,7 +43,6 @@ def tim_anh_bia(duong_dan_thu_muc, thu_muc_raw):
         for ten_file in cac_dinh_dang:
             if os.path.exists(os.path.join(duong_dan_thu_muc, ten_file)):
                 return f"/audio/{quote(thu_muc_raw)}/{ten_file}"
-
     if os.path.exists("audio"):
         ten_chuan = thu_muc_raw.split("#")[0].strip().lower()
         for folder_name in os.listdir("audio"):
@@ -61,9 +59,7 @@ def lay_danh_sach_hot():
     stats = doc_thong_ke()
     if not os.path.exists("audio"):
         return []
-
     existing_folders = [f for f in os.listdir("audio") if os.path.isdir(os.path.join("audio", f))]
-
     aggregated_stats = {}
     cleaned_stats = {}
     for folder_key, views in stats.items():
@@ -76,7 +72,6 @@ def lay_danh_sach_hot():
                 if ef.split("#")[0].strip().lower() == base_key:
                     matched_real_folder = ef
                     break
-
         if matched_real_folder:
             cleaned_stats[folder_key] = views
             base_name = matched_real_folder.split("#")[0].strip().lower()
@@ -86,19 +81,15 @@ def lay_danh_sach_hot():
                     "thu_muc_raw": matched_real_folder
                 }
             aggregated_stats[base_name]["views"] += views
-
     if len(cleaned_stats) != len(stats):
         ghi_thong_ke(cleaned_stats)
-
     sorted_items = sorted(aggregated_stats.values(), key=lambda x: x["views"], reverse=True)[:5]
-
     hot_list = []
     for item in sorted_items:
         thu_muc_raw = item["thu_muc_raw"]
         ten_hien_thi = thu_muc_raw.split("#")[0].strip().replace('-', ' ').title()
         duong_dan_thu_muc = os.path.join("audio", thu_muc_raw)
         anh_bia = tim_anh_bia(duong_dan_thu_muc, thu_muc_raw)
-
         hot_list.append({
             "thu_muc_raw": thu_muc_raw,
             "ten_hien_thi": ten_hien_thi,
@@ -117,9 +108,11 @@ def lay_archive_identifier(raw_text, ten_sach_mac_dinh):
             path = urlparse(raw_text).path
             parts = [p for p in path.split('/') if p]
             if "details" in parts or "download" in parts or "items" in parts:
-                idx = max(parts.index("details") if "details" in parts else -1,
-                          parts.index("download") if "download" in parts else -1,
-                          parts.index("items") if "items" in parts else -1)
+                idx = max(
+                    parts.index("details") if "details" in parts else -1,
+                    parts.index("download") if "download" in parts else -1,
+                    parts.index("items") if "items" in parts else -1
+                )
                 if idx + 1 < len(parts):
                     return parts[idx + 1]
         except Exception:
@@ -145,11 +138,16 @@ def parse_archive_length(length_val):
     return 0.0
 
 
+def chuan_hoa_ten_goc(filename: str) -> str:
+    """Lấy phần tên gốc (không gồm đuôi mở rộng) và chuẩn hóa NFC + chữ thường để ghép cặp MP3 - SRT"""
+    stem = os.path.splitext(filename)[0]
+    return unicodedata.normalize("NFC", stem).strip().lower()
+
+
 def lay_tat_ca_truyen():
     danh_sach = []
     if not os.path.exists("audio"):
         return danh_sach
-
     for ten in os.listdir("audio"):
         duong_dan = os.path.join("audio", ten)
         if os.path.isdir(duong_dan):
@@ -188,7 +186,6 @@ async def trang_chu(request: Request, tag: str = None):
     for tr in danh_sach_truyen:
         for t in tr["tags"]:
             danh_sach_tags.add(t)
-
     return templates.TemplateResponse(
         request=request,
         name="home.html",
@@ -210,7 +207,7 @@ async def ghi_nhan_luot_xem(thu_muc_raw: str):
 
 @app.get("/api/archive-text/{identifier}/{filename:path}", response_class=PlainTextResponse)
 async def lay_noi_dung_text_archive(identifier: str, filename: str):
-    """Proxy tải nội dung file .txt từ Internet Archive và chuẩn hóa Unicode NFC"""
+    """Proxy tải nội dung file .txt / .srt / .vtt từ Internet Archive và chuẩn hóa Unicode NFC"""
     url = f"https://archive.org/download/{quote(identifier)}/{quote(filename)}"
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -266,7 +263,18 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
             data = json.loads(response.read().decode('utf-8'))
             files = data.get('files', [])
 
-            # 1. Lấy tất cả file MP3 kèm thời lượng từng tập (length) để đồng bộ vị trí text
+            # 0. Lập bảng tra cứu các file phụ đề (.srt / .vtt) trùng tên với file .mp3
+            srt_lookup = {}
+            for f_obj in files:
+                fname = f_obj.get('name', '')
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in ('.srt', '.vtt'):
+                    stem = chuan_hoa_ten_goc(fname)
+                    # Ưu tiên .srt nếu có cả .srt và .vtt cùng tên
+                    if stem not in srt_lookup or ext == '.srt':
+                        srt_lookup[stem] = f"/api/archive-text/{quote(archive_identifier)}/{quote(fname)}"
+
+            # 1. Lấy tất cả file MP3 kèm thời lượng từng tập (length) và link phụ đề .srt (nếu có)
             mp3_entries = sorted(
                 [f for f in files if f.get('name', '').lower().endswith('.mp3')],
                 key=lambda x: x.get('name', '')
@@ -276,11 +284,13 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
                 duration_sec = parse_archive_length(f_obj.get('length'))
                 ten_hien_thi = file_name.replace('.mp3', '').replace('-', ' ').title()
                 audio_link = f"https://archive.org/download/{archive_identifier}/{quote(file_name)}"
+                stem = chuan_hoa_ten_goc(file_name)
                 danh_sach_chuong_url.append({
                     "index": idx,
                     "ten_chuong": ten_hien_thi,
                     "link": audio_link,
-                    "duration": duration_sec
+                    "duration": duration_sec,
+                    "srt_link": srt_lookup.get(stem, "")
                 })
 
             # 2. Lấy tất cả file TXT (loại bỏ các file hệ thống _djvu.txt của Archive)
@@ -305,7 +315,8 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
             "index": 0,
             "ten_chuong": "Chương 1",
             "link": f"https://archive.org/download/{archive_identifier}/chuong-001.mp3",
-            "duration": 0
+            "duration": 0,
+            "srt_link": ""
         })
 
     tags_list = []
@@ -330,19 +341,16 @@ async def nghe_truyen(request: Request, ten_truyen_url: str):
         for t in thu_muc_that.split("#")[1:]:
             if t.strip():
                 tags_list.append("#" + t.strip().lower())
-
     if not tags_list:
         tags_list = ["#sắc hiệp", "#audio"]
 
     current_tags_set = set(tags_list)
-
     tat_ca = lay_tat_ca_truyen()
     truyen_lien_quan = []
     for tr in tat_ca:
         if tr["thu_muc_raw"] != thu_muc_that:
             if set(tr["tags"]) & current_tags_set:
                 truyen_lien_quan.append(tr)
-
     if len(truyen_lien_quan) > 6:
         truyen_lien_quan = random.sample(truyen_lien_quan, 6)
     else:

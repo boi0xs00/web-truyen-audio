@@ -189,8 +189,18 @@
         }
         .chapter-item:hover { background-color: var(--bg-element); color: #fff; }
         .chapter-item.active { background-color: #292524; color: var(--accent-yellow); font-weight: bold; border-left: 3px solid var(--accent-yellow); }
+        .srt-pill {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
 
-        /* KHỐI VĂN BẢN (TRUYỆN CHỮ TỪ ARCHIVE) */
+        /* KHỐI VĂN BẢN (TRUYỆN CHỮ / KARAOKE SRT) */
         .text-files-box {
             background-color: var(--bg-sidebar);
             border: 1px solid var(--border-color);
@@ -337,6 +347,16 @@
         .speed-tuner input:focus {
             border-color: var(--accent-yellow);
         }
+        .srt-mode-badge {
+            display: none;
+            background-color: rgba(16, 185, 129, 0.18);
+            color: #34d399;
+            border: 1px solid #10b981;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+        }
 
         /* THANH NHẬP KHỚP VỊ TRÍ & QUẢN LÝ CỜ */
         .sync-anchor-bar {
@@ -467,6 +487,17 @@
             margin-right: 7px;
             font-family: monospace;
             vertical-align: middle;
+        }
+        .srt-time-tag {
+            display: inline-block;
+            color: #64748b;
+            font-size: 11px;
+            font-family: monospace;
+            margin-right: 8px;
+            user-select: none;
+        }
+        .reader-para.reading-active .srt-time-tag {
+            color: #eab308;
         }
 
         .story-tags-footer { display: flex; gap: 8px; margin: 20px 0; flex-wrap: wrap; align-items: center; }
@@ -755,9 +786,13 @@
                     <div class="chapter-item"
                          data-index="{{ chap.index }}"
                          data-duration="{{ chap.duration }}"
+                         data-srt="{{ chap.srt_link if chap.srt_link else '' }}"
                          data-name="{{ chap.ten_chuong }}"
                          onclick="chonVaPhatChuongTeraBox('{{ chap.link }}', '{{ chap.ten_chuong }}', this)">
-                        <span>▶ {{ chap.ten_chuong }}</span>
+                        <span>
+                            ▶ {{ chap.ten_chuong }}
+                            {% if chap.srt_link %}<span class="srt-pill">KARAOKE SRT</span>{% endif %}
+                        </span>
                         <span style="font-size: 11px; color: var(--text-muted);">Internet Archive</span>
                     </div>
                     {% endfor %}
@@ -767,27 +802,29 @@
                 </div>
             </div>
 
-            <!-- KHỐI FILE TEXT TRUYỆN TỪ INTERNET ARCHIVE -->
-            {% if danh_sach_text %}
-            <div class="text-files-box">
-                <div class="text-files-title">📄 Bản Văn Bản (Truyện Chữ)</div>
-                {% for txt in danh_sach_text %}
-                <div class="text-file-row">
-                    <div class="text-file-name">📝 {{ txt.ten_file }}</div>
-                    <div class="text-file-actions">
-                        <button class="btn-read-txt" onclick="docTruyenChu('{{ archive_id }}', '{{ txt.file_goc }}', '{{ txt.ten_file }}')">📖 Đọc trực tiếp</button>
-                        <a href="{{ txt.download_link }}" class="btn-dl-txt" download>⬇ Tải .TXT</a>
+            <!-- KHỐI VĂN BẢN (TRUYỆN CHỮ TỪ ARCHIVE HOẶC PHỤ ĐỀ KARAOKE SRT) -->
+            <div class="text-files-box" id="textFilesBox" {% if not danh_sach_text %}style="display:none;"{% endif %}>
+                <div class="text-files-title" id="textFilesBoxTitle">📄 Bản Văn Bản (Truyện Chữ)</div>
+                {% if danh_sach_text %}
+                    {% for txt in danh_sach_text %}
+                    <div class="text-file-row">
+                        <div class="text-file-name">📝 {{ txt.ten_file }}</div>
+                        <div class="text-file-actions">
+                            <button class="btn-read-txt" onclick="docTruyenChu('{{ archive_id }}', '{{ txt.file_goc }}', '{{ txt.ten_file }}')">📖 Đọc trực tiếp</button>
+                            <a href="{{ txt.download_link }}" class="btn-dl-txt" download>⬇ Tải .TXT</a>
+                        </div>
                     </div>
-                </div>
-                {% endfor %}
+                    {% endfor %}
+                {% endif %}
 
                 <div class="reader-container" id="readerContainer">
                     <div class="reader-toolbar">
                         <span id="readerFileName" style="color: var(--accent-yellow); font-weight: bold; font-size: 13.5px;">Đang tải...</span>
                         <div class="reader-controls">
-                            <button class="reader-btn btn-drop-flag" onclick="camCoTaiDoanDangChon()" title="Cắm cờ tại đoạn đang tô sáng">🚩 Cắm cờ</button>
+                            <span class="srt-mode-badge" id="srtModeBadge">🎤 Karaoke SRT (Chuẩn từng câu)</span>
+                            <button class="reader-btn btn-drop-flag" id="btnDropFlag" onclick="camCoTaiDoanDangChon()" title="Cắm cờ tại đoạn đang tô sáng">🚩 Cắm cờ</button>
                             <button class="reader-btn active-sync" id="btnAutoSync" onclick="toggleAutoSync()">🔄 Tự cuộn: BẬT</button>
-                            <div class="speed-tuner" title="Nhập trực tiếp hoặc bấm -/+ để chỉnh nhịp chữ chạy (từ/giây audio)">
+                            <div class="speed-tuner" id="wpsTunerBox" title="Nhập trực tiếp hoặc bấm -/+ để chỉnh nhịp chữ chạy (từ/giây audio)">
                                 <span>Nhịp:</span>
                                 <button onclick="tinhChinhNhip(-0.1)">-</button>
                                 <input type="number" id="wpsInput" step="0.05" min="1.0" max="15.0" value="4.5"
@@ -801,7 +838,7 @@
                                 <span id="phaseOffsetDisplay">0.0s</span>
                                 <button onclick="dichPhaText(0.5)">+0.5s</button>
                             </div>
-                            <button class="reader-btn" onclick="toggleSyncAnchorBar()" title="Ẩn/hiện thanh tìm kiếm & quản lý cờ">🔍 Tìm</button>
+                            <button class="reader-btn" onclick="toggleSyncAnchorBar()" title="Ẩn/hiện thanh tìm kiếm">🔍 Tìm</button>
                             <button class="reader-btn" onclick="doiCoChu(-2)">A-</button>
                             <button class="reader-btn" onclick="doiCoChu(2)">A+</button>
                             <button class="reader-btn" style="background-color: #ef4444;" onclick="dongKhungDoc()">✕ Đóng</button>
@@ -811,7 +848,7 @@
                     <!-- THANH TÌM KIẾM & QUẢN LÝ CỜ ĐA ĐIỂM -->
                     <div class="sync-anchor-bar" id="syncAnchorBar">
                         <input type="text" id="anchorSearchInput" placeholder="Gõ số chương hoặc 1 câu đang nghe để tìm tới..." onkeydown="if(event.key==='Enter') timVaKhopMoc()">
-                        <button class="btn-anchor-go" onclick="timVaKhopMoc()">🎯 Tìm & Cắm cờ</button>
+                        <button class="btn-anchor-go" id="btnAnchorGo" onclick="timVaKhopMoc()">🎯 Tìm & Cắm cờ</button>
                         <button class="btn-anchor-next" id="btnAnchorNext" style="display:none;" onclick="chuyenKetQuaKhopTiepTheo()">Tiếp theo ⏭</button>
                         <button class="btn-clear-flags" id="btnClearFlags" style="display:none;" onclick="xoaTatCaCo()">🗑️ Xóa cờ (0)</button>
                         <div class="sync-status-msg" id="syncStatusMsg">💡 Click trực tiếp vào đúng chữ đang nghe để cắm cờ 🚩 (tự bù phản xạ theo tốc độ phát). Bạn có thể gõ trực tiếp số vào ô <b>Nhịp</b> và nhấn Enter.</div>
@@ -820,7 +857,6 @@
                     <div class="reader-content" id="readerContent">Đang tải nội dung từ máy chủ...</div>
                 </div>
             </div>
-            {% endif %}
 
             <div class="story-tags-footer">
                 <span class="tag-label">Tags:</span>
@@ -891,6 +927,7 @@
         const currentThuMuc = "{{ thu_muc }}";
         const currentTenTruyen = "{{ ten_truyen }}";
         const currentAnhBia = "{{ anh_bia if anh_bia else '' }}";
+        const hasTxtFilesOnPage = {{ 'true' if danh_sach_text else 'false' }};
         const storageKey = "audio_progress_v2_" + encodeURIComponent(currentThuMuc);
         const timerCheckpointKey = "timer_checkpoint_" + encodeURIComponent(currentThuMuc);
 
@@ -913,12 +950,13 @@
             return raw.split("#")[0].trim().toLowerCase();
         }
 
-        /* HỆ THỐNG ĐỒNG BỘ TEXT & PHÂN CẤP DẤU NGẮT NGHỈ CHI TIẾT */
+        /* HỆ THỐNG ĐỒNG BỘ TEXT: HỖ TRỢ SONG SONG KARAOKE SRT VÀ CẮM CỜ ĐA ĐIỂM */
         const allChapterItems = Array.from(document.querySelectorAll('.chapter-item'));
         const chapterDurations = allChapterItems.map(el => parseFloat(el.getAttribute('data-duration')) || 0);
         const hasValidDurations = chapterDurations.length > 0 && chapterDurations.every(d => d > 0);
         const totalSeriesDuration = hasValidDurations ? chapterDurations.reduce((a, b) => a + b, 0) : 0;
 
+        let isSrtMode = false; // true = dùng phụ đề .srt/.vtt của tập hiện tại; false = dùng file .txt + cắm cờ
         let paragraphMap = [];
         let totalSpeechWeight = 0;
         let autoSyncEnabled = true;
@@ -929,11 +967,149 @@
         let searchMatches = [];
         let searchMatchCursor = 0;
         let phaseOffsetSec = 0.0;
-        const REACTION_SEC = 0.4; // độ trễ phản xạ khi click (giây thực), tự nhân với playbackRate
-        let inheritedAnchor = null; // Lưu { targetEpIndex, startWeight } khi chuyển nối tiếp từ tập trước
+        const REACTION_SEC = 0.4;
+        let inheritedAnchor = null;
 
         const storyWpsStorageKey = `txt_story_wps_v4_${encodeURIComponent(layTenChuan(currentThuMuc))}`;
         let calibratedWps = parseFloat(localStorage.getItem(storyWpsStorageKey) || '4.5');
+
+        function capNhatGiaoDienTheoCheDo(srtActive) {
+            isSrtMode = srtActive;
+            const srtBadge = document.getElementById('srtModeBadge');
+            const btnFlag = document.getElementById('btnDropFlag');
+            const wpsBox = document.getElementById('wpsTunerBox');
+            const btnGo = document.getElementById('btnAnchorGo');
+            const statusEl = document.getElementById('syncStatusMsg');
+
+            if (srtActive) {
+                if (srtBadge) srtBadge.style.display = 'inline-block';
+                if (btnFlag) btnFlag.style.display = 'none';
+                if (wpsBox) wpsBox.style.display = 'none';
+                if (btnGo) btnGo.innerText = '🔍 Tìm câu';
+                if (statusEl) {
+                    statusEl.innerText = '🎤 Chế độ Karaoke SRT đang bật: Tự động chạy chữ khớp 100% ở mọi tốc độ phát. Click vào bất kỳ câu nào để tua audio tới đúng câu đó.';
+                }
+            } else {
+                if (srtBadge) srtBadge.style.display = 'none';
+                if (btnFlag) btnFlag.style.display = 'inline-block';
+                if (wpsBox) wpsBox.style.display = 'inline-flex';
+                if (btnGo) btnGo.innerText = '🎯 Tìm & Cắm cờ';
+                if (statusEl) {
+                    statusEl.innerText = '💡 Click trực tiếp vào đúng chữ đang nghe để cắm cờ 🚩 (tự bù phản xạ theo tốc độ phát). Bạn có thể gõ trực tiếp số vào ô Nhịp và nhấn Enter.';
+                }
+            }
+        }
+
+        function parseSrtTimestamp(timeStr) {
+            const clean = timeStr.trim().replace(',', '.');
+            const parts = clean.split(':');
+            if (parts.length === 3) {
+                return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+            }
+            if (parts.length === 2) {
+                return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
+            }
+            return parseFloat(clean) || 0;
+        }
+
+        function phanTichFileSrt(srtRawText) {
+            const normalized = srtRawText.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').trim();
+            const blocks = normalized.split(/\n\s*\n/);
+            const cues = [];
+
+            for (const block of blocks) {
+                const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+                const arrowIdx = lines.findIndex(l => l.includes('-->'));
+                if (arrowIdx === -1) continue;
+
+                const timeParts = lines[arrowIdx].split('-->');
+                if (timeParts.length < 2) continue;
+
+                const startSec = parseSrtTimestamp(timeParts[0]);
+                const endSec = Math.max(startSec + 0.05, parseSrtTimestamp(timeParts[1].split(' ')[0]));
+                const text = lines.slice(arrowIdx + 1).join(' ').replace(/<[^>]+>/g, '').trim();
+                if (!text) continue;
+
+                cues.push({ startSec, endSec, text });
+            }
+            return cues;
+        }
+
+        async function napKaraokeSrtChoTap(srtUrl, chapterName) {
+            const box = document.getElementById('textFilesBox');
+            const container = document.getElementById('readerContainer');
+            const contentBox = document.getElementById('readerContent');
+            const titleBox = document.getElementById('readerFileName');
+
+            if (box) box.style.display = 'block';
+            container.style.display = 'block';
+            currentReaderMeta = { mode: 'srt', srtUrl, displayTitle: chapterName };
+            capNhatGiaoDienTheoCheDo(true);
+
+            titleBox.innerText = "🎤 Karaoke: " + chapterName;
+            contentBox.innerHTML = "<div style='color:var(--text-muted);'>⏳ Đang tải phụ đề đồng bộ .SRT...</div>";
+
+            try {
+                const res = await fetch(srtUrl);
+                const rawSrt = (await res.text()).normalize('NFC');
+                const cues = phanTichFileSrt(rawSrt);
+
+                paragraphMap = [];
+                totalSpeechWeight = 0;
+                lastActiveParaObj = null;
+                episodeFlags = [];
+
+                const fragment = document.createDocumentFragment();
+                cues.forEach((cue, idx) => {
+                    const p = document.createElement('p');
+                    p.className = 'reader-para';
+
+                    const parsed = phanTichTokenDoanVan(cue.text);
+                    const paraObj = {
+                        index: idx,
+                        el: p,
+                        rawText: cue.text,
+                        textLower: cue.text.toLowerCase().replace(/\s+/g, ' '),
+                        startSec: cue.startSec,
+                        endSec: cue.endSec,
+                        startWeight: idx,
+                        endWeight: idx + 1,
+                        tokens: parsed.tokens,
+                        totalTokenWeight: parsed.totalWeight,
+                        hasFlag: false,
+                        flagTime: 0,
+                        spokenNode: null,
+                        unspokenNode: null,
+                        barNode: null,
+                        litCount: -1
+                    };
+
+                    renderNoiDungDoanVan(paraObj, null);
+
+                    // Click vào câu nào trên bản Karaoke SRT -> tua audio tới đúng giây bắt đầu câu đó
+                    p.onclick = function() {
+                        player.currentTime = Math.max(0, cue.startSec - phaseOffsetSec);
+                        if (player.paused) {
+                            player.play().catch(() => {});
+                        }
+                        dongBoViTriText(true);
+                    };
+
+                    fragment.appendChild(p);
+                    paragraphMap.push(paraObj);
+                });
+
+                contentBox.innerHTML = '';
+                if (paragraphMap.length === 0) {
+                    contentBox.innerText = "⚠️ File phụ đề .SRT trống hoặc sai định dạng.";
+                } else {
+                    contentBox.appendChild(fragment);
+                    dongBoViTriText(true);
+                }
+            } catch (err) {
+                contentBox.innerText = "✖ Không thể tải file phụ đề .SRT từ máy chủ.";
+            }
+        }
 
         function phanTichTokenDoanVan(text) {
             const trimmed = text.trim();
@@ -946,10 +1122,10 @@
             for (const part of parts) {
                 if (!part) continue;
                 charPos += part.length;
-                let startW = accWeight; // thời điểm token bắt đầu được phát âm
+                let startW = accWeight;
 
                 if (/^\s+$/.test(part)) {
-                    // khoảng trắng: không tốn trọng số
+                    // khoảng trắng
                 } else if (/^(…+|\.{2,}|—{2,}|-{2,})$/.test(part)) {
                     accWeight += 3.8;
                 } else {
@@ -960,8 +1136,8 @@
                     else if (/[,;:]+["”'’)\]]*$/.test(part)) trail = 1.1;
                     else if (/["”'’)\]]+$/.test(part)) trail = 0.8;
 
-                    startW = accWeight + lead;          // từ bắt đầu SAU phần nghỉ mở ngoặc
-                    accWeight += 1.0 + lead + trail;    // tổng trọng số
+                    startW = accWeight + lead;
+                    accWeight += 1.0 + lead + trail;
                 }
                 tokens.push({ str: part, startW: startW, endW: accWeight, charEnd: charPos });
             }
@@ -1013,6 +1189,8 @@
             const el = document.getElementById('phaseOffsetDisplay');
             if (el) el.innerText = '0.0s';
 
+            if (isSrtMode) return;
+
             const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
 
             try {
@@ -1045,6 +1223,7 @@
         }
 
         function luuDanhSachCo() {
+            if (isSrtMode) return;
             try {
                 episodeFlags.sort((a, b) => a.audioTime - b.audioTime);
                 localStorage.setItem(getFlagsStorageKey(), JSON.stringify(episodeFlags));
@@ -1112,7 +1291,7 @@
         }
 
         function camCoTaiDoanVan(paraObj, customPrefix = null, charOffset = 0, fromClick = false) {
-            if (!paraObj) return;
+            if (!paraObj || isSrtMode) return;
             const comp = (fromClick && !player.paused) ? REACTION_SEC * player.playbackRate : 0;
             const curAudioTime = Math.max(0, (player.currentTime || 0) + phaseOffsetSec - comp);
             const weightPos = weightTaiKyTu(paraObj, charOffset);
@@ -1140,6 +1319,7 @@
         }
 
         function camCoTaiDoanDangChon() {
+            if (isSrtMode) return;
             if (lastActiveParaObj) {
                 camCoTaiDoanVan(lastActiveParaObj, null, 0, false);
             } else if (paragraphMap.length > 0) {
@@ -1167,6 +1347,13 @@
             return badge;
         }
 
+        function taoTagThoiGianSrt(paraObj) {
+            const span = document.createElement('span');
+            span.className = 'srt-time-tag';
+            span.textContent = `[${formatTime(paraObj.startSec)}]`;
+            return span;
+        }
+
         function renderNoiDungDoanVan(paraObj, elapsed = null) {
             if (!paraObj || !paraObj.el) return;
             const el = paraObj.el;
@@ -1174,14 +1361,16 @@
             if (elapsed === null) {
                 paraObj.spokenNode = null;
                 el.innerHTML = '';
-                if (paraObj.hasFlag) el.appendChild(taoBadgeCo(paraObj));
+                if (isSrtMode) el.appendChild(taoTagThoiGianSrt(paraObj));
+                else if (paraObj.hasFlag) el.appendChild(taoBadgeCo(paraObj));
                 el.appendChild(document.createTextNode(paraObj.rawText));
                 return;
             }
 
             if (!paraObj.spokenNode) {
                 el.innerHTML = '';
-                if (paraObj.hasFlag) el.appendChild(taoBadgeCo(paraObj));
+                if (isSrtMode) el.appendChild(taoTagThoiGianSrt(paraObj));
+                else if (paraObj.hasFlag) el.appendChild(taoBadgeCo(paraObj));
                 paraObj.spokenNode = document.createElement('span');
                 paraObj.spokenNode.className = 'para-spoken';
                 paraObj.unspokenNode = document.createElement('span');
@@ -1214,14 +1403,16 @@
                 p.el.classList.remove('has-flag');
             });
 
-            episodeFlags.forEach(flag => {
-                const paraObj = paragraphMap[flag.paraIndex];
-                if (paraObj && paraObj.el) {
-                    paraObj.hasFlag = true;
-                    paraObj.flagTime = flag.audioTime;
-                    paraObj.el.classList.add('has-flag');
-                }
-            });
+            if (!isSrtMode) {
+                episodeFlags.forEach(flag => {
+                    const paraObj = paragraphMap[flag.paraIndex];
+                    if (paraObj && paraObj.el) {
+                        paraObj.hasFlag = true;
+                        paraObj.flagTime = flag.audioTime;
+                        paraObj.el.classList.add('has-flag');
+                    }
+                });
+            }
 
             paragraphMap.forEach(p => {
                 if (p === lastActiveParaObj) p.spokenNode = null;
@@ -1230,7 +1421,7 @@
 
             const clearBtn = document.getElementById('btnClearFlags');
             if (clearBtn) {
-                if (episodeFlags.length > 0) {
+                if (!isSrtMode && episodeFlags.length > 0) {
                     clearBtn.style.display = 'inline-block';
                     clearBtn.innerText = `🗑️ Xóa cờ (${episodeFlags.length})`;
                 } else {
@@ -1290,6 +1481,19 @@
             return Math.max(0, Math.min(totalSpeechWeight, ratio * totalSpeechWeight));
         }
 
+        function nhayToiKetQuaSrt(chosen) {
+            player.currentTime = Math.max(0, chosen.startSec - phaseOffsetSec);
+            if (player.paused) player.play().catch(() => {});
+            dongBoViTriText(true);
+            const statusEl = document.getElementById('syncStatusMsg');
+            const extra = searchMatches.length > 1
+                ? ` (Kết quả ${searchMatchCursor + 1}/${searchMatches.length} — bấm "Tiếp theo ⏭" nếu chưa đúng)`
+                : '';
+            if (statusEl) {
+                statusEl.innerText = `🎯 Đã tua tới câu tại ${formatTime(chosen.startSec)}${extra}`;
+            }
+        }
+
         function timVaKhopMoc() {
             const inputEl = document.getElementById('anchorSearchInput');
             const statusEl = document.getElementById('syncStatusMsg');
@@ -1316,6 +1520,12 @@
 
             nextBtn.style.display = searchMatches.length > 1 ? 'inline-block' : 'none';
             const chosen = searchMatches[0];
+
+            if (isSrtMode) {
+                nhayToiKetQuaSrt(chosen);
+                return;
+            }
+
             const extra = searchMatches.length > 1
                 ? ` (Kết quả 1/${searchMatches.length} — bấm "Tiếp theo ⏭" nếu chưa đúng)`
                 : '';
@@ -1325,6 +1535,11 @@
 
         function chuyenKetQuaKhopTiepTheo() {
             if (searchMatches.length <= 1) return;
+            if (isSrtMode) {
+                searchMatchCursor = (searchMatchCursor + 1) % searchMatches.length;
+                nhayToiKetQuaSrt(searchMatches[searchMatchCursor]);
+                return;
+            }
             const rawQuery = document.getElementById('anchorSearchInput').value.trim().toLowerCase().replace(/\s+/g, ' ');
             const prevChosen = searchMatches[searchMatchCursor];
             if (prevChosen) {
@@ -1351,31 +1566,65 @@
         }
 
         function dongBoViTriText(forceScroll = false) {
-            if (paragraphMap.length === 0 || totalSpeechWeight === 0) return;
+            if (paragraphMap.length === 0) return;
 
-            const targetWeight = tinhViTriTrongSoHienTai();
+            let matched = null;
+            let localElapsedWeight = 0;
 
-            let left = 0;
-            let right = paragraphMap.length - 1;
-            let matched = paragraphMap[0];
+            if (isSrtMode) {
+                // CHẾ ĐỘ KARAOKE SRT: Khớp trực tiếp theo mốc thời gian thật trong file MP3
+                const t = Math.max(0, (player.currentTime || 0) + phaseOffsetSec);
+                let left = 0;
+                let right = paragraphMap.length - 1;
+                matched = paragraphMap[0];
 
-            while (left <= right) {
-                const mid = Math.floor((left + right) / 2);
-                const item = paragraphMap[mid];
-                if (targetWeight >= item.startWeight && targetWeight <= item.endWeight) {
-                    matched = item;
-                    break;
-                } else if (targetWeight < item.startWeight) {
-                    right = mid - 1;
-                } else {
-                    matched = item;
-                    left = mid + 1;
+                while (left <= right) {
+                    const mid = Math.floor((left + right) / 2);
+                    const item = paragraphMap[mid];
+                    if (t >= item.startSec && t <= item.endSec) {
+                        matched = item;
+                        break;
+                    } else if (t < item.startSec) {
+                        right = mid - 1;
+                    } else {
+                        matched = item;
+                        left = mid + 1;
+                    }
+                }
+
+                if (matched) {
+                    const span = Math.max(0.05, matched.endSec - matched.startSec);
+                    const ratio = Math.max(0, Math.min(1, (t - matched.startSec) / span));
+                    localElapsedWeight = ratio * matched.totalTokenWeight;
+                }
+            } else {
+                // CHẾ ĐỘ CẮM CỜ + SPEECH WEIGHT (CHO FILE TXT CŨ)
+                if (totalSpeechWeight === 0) return;
+                const targetWeight = tinhViTriTrongSoHienTai();
+                let left = 0;
+                let right = paragraphMap.length - 1;
+                matched = paragraphMap[0];
+
+                while (left <= right) {
+                    const mid = Math.floor((left + right) / 2);
+                    const item = paragraphMap[mid];
+                    if (targetWeight >= item.startWeight && targetWeight <= item.endWeight) {
+                        matched = item;
+                        break;
+                    } else if (targetWeight < item.startWeight) {
+                        right = mid - 1;
+                    } else {
+                        matched = item;
+                        left = mid + 1;
+                    }
+                }
+
+                if (matched) {
+                    localElapsedWeight = Math.max(0, targetWeight - matched.startWeight);
                 }
             }
 
             if (matched) {
-                const localElapsedWeight = Math.max(0, targetWeight - matched.startWeight);
-
                 if (matched !== lastActiveParaObj) {
                     if (lastActiveParaObj && lastActiveParaObj.el) {
                         lastActiveParaObj.el.classList.remove('reading-active');
@@ -1477,15 +1726,28 @@
             capNhatLichSuToanCuc(chapterName);
             dongPopup();
 
-            taiLaiDanhSachCo();
-            if (document.getElementById('readerContainer')?.style.display === 'block') {
-                dongBoViTriText(true);
+            const srtUrl = element.getAttribute('data-srt') || '';
+            if (srtUrl) {
+                // Tập mới có file .srt -> tự động chuyển sang chế độ Karaoke SRT
+                napKaraokeSrtChoTap(srtUrl, chapterName);
+            } else {
+                // Tập cũ không có .srt -> giữ nguyên chế độ cắm cờ trên file .txt
+                if (isSrtMode) {
+                    capNhatGiaoDienTheoCheDo(false);
+                    if (!hasTxtFilesOnPage) {
+                        dongKhungDoc();
+                    }
+                }
+                taiLaiDanhSachCo();
+                if (document.getElementById('readerContainer')?.style.display === 'block') {
+                    dongBoViTriText(true);
+                }
             }
         }
 
         player.addEventListener('timeupdate', function() {
             if (player.src && currentItem) {
-                let chapterName = currentItem.querySelector('span').innerText.replace('▶ ', '');
+                let chapterName = currentItem.querySelector('span').innerText.replace('▶ ', '').replace('KARAOKE SRT', '').trim();
                 let data = {
                     link: player.src,
                     chapterName: chapterName,
@@ -1507,11 +1769,13 @@
         player.addEventListener('ended', function() {
             if (currentItem && currentItem.nextElementSibling) {
                 const curIdx = parseInt(currentItem.getAttribute('data-index')) || 0;
-                const endWeight = tinhViTriTrongSoHienTai();
-                inheritedAnchor = {
-                    targetEpIndex: curIdx + 1,
-                    startWeight: endWeight
-                };
+                if (!isSrtMode) {
+                    const endWeight = tinhViTriTrongSoHienTai();
+                    inheritedAnchor = {
+                        targetEpIndex: curIdx + 1,
+                        startWeight: endWeight
+                    };
+                }
 
                 let nextEl = currentItem.nextElementSibling;
                 let onclickStr = nextEl.getAttribute('onclick');
@@ -1557,8 +1821,8 @@
             const targetTime = savedTimerCheckpoint.currentTime || 0;
             phatTaiViTri(savedTimerCheckpoint.link, targetTime);
 
-            // Nếu lúc hẹn giờ đang mở khung đọc text -> tự mở lại file text và khóa đúng mốc chữ
-            if (savedTimerCheckpoint.reader && savedTimerCheckpoint.reader.fileName) {
+            // Nếu là chế độ đọc file .txt cũ -> mở lại file .txt và khóa đúng mốc chữ
+            if (savedTimerCheckpoint.reader && savedTimerCheckpoint.reader.mode !== 'srt' && savedTimerCheckpoint.reader.fileName) {
                 const r = savedTimerCheckpoint.reader;
                 await docTruyenChu(r.archiveId, r.fileName, r.displayTitle);
 
@@ -1629,17 +1893,20 @@
             }
         });
 
-        /* TÍNH NĂNG ĐỌC FILE TEXT & CẮM CỜ ĐỒNG BỘ */
+        /* TÍNH NĂNG ĐỌC FILE TEXT & CẮM CỜ ĐỒNG BỘ (CHO TRUYỆN CŨ) */
         let currentFontSize = 17;
-        let currentReaderMeta = null; // Lưu { archiveId, fileName, displayTitle } của file text đang mở
+        let currentReaderMeta = null;
 
         async function docTruyenChu(archiveId, fileName, displayTitle) {
+            const box = document.getElementById('textFilesBox');
             const container = document.getElementById('readerContainer');
             const contentBox = document.getElementById('readerContent');
             const titleBox = document.getElementById('readerFileName');
 
+            if (box) box.style.display = 'block';
             container.style.display = 'block';
-            currentReaderMeta = { archiveId, fileName, displayTitle };
+            capNhatGiaoDienTheoCheDo(false);
+            currentReaderMeta = { mode: 'txt', archiveId, fileName, displayTitle };
             titleBox.innerText = "📖 " + displayTitle;
             contentBox.innerHTML = "<div style='color:var(--text-muted);'>⏳ Đang tải dữ liệu văn bản từ Internet Archive, vui lòng chờ giây lát...</div>";
             container.scrollIntoView({ behavior: 'smooth' });
@@ -1710,6 +1977,10 @@
         function dongKhungDoc() {
             document.getElementById('readerContainer').style.display = 'none';
             currentReaderMeta = null;
+            if (!hasTxtFilesOnPage) {
+                const box = document.getElementById('textFilesBox');
+                if (box) box.style.display = 'none';
+            }
         }
 
         function tua(giay) { player.currentTime += giay; }
@@ -1760,17 +2031,18 @@
 
             let savedNote = "";
             if (player.src && currentItem) {
-                const chapterName = currentItem.querySelector('span').innerText.replace('▶ ', '');
+                const chapterName = currentItem.querySelector('span').innerText.replace('▶ ', '').replace('KARAOKE SRT', '').trim();
                 const isReaderOpen = document.getElementById('readerContainer')?.style.display === 'block';
                 const checkpoint = {
                     link: player.src,
                     chapterName: chapterName,
                     currentTime: player.currentTime || 0,
                     reader: (isReaderOpen && currentReaderMeta) ? {
-                        archiveId: currentReaderMeta.archiveId,
-                        fileName: currentReaderMeta.fileName,
-                        displayTitle: currentReaderMeta.displayTitle,
-                        weightPos: paragraphMap.length > 0 ? tinhViTriTrongSoHienTai() : null
+                        mode: currentReaderMeta.mode || 'txt',
+                        archiveId: currentReaderMeta.archiveId || '',
+                        fileName: currentReaderMeta.fileName || '',
+                        displayTitle: currentReaderMeta.displayTitle || '',
+                        weightPos: (!isSrtMode && paragraphMap.length > 0) ? tinhViTriTrongSoHienTai() : null
                     } : null
                 };
                 try {
