@@ -775,7 +775,7 @@
                         <button class="btn-anchor-go" onclick="timVaKhopMoc()">🎯 Tìm & Cắm cờ</button>
                         <button class="btn-anchor-next" id="btnAnchorNext" style="display:none;" onclick="chuyenKetQuaKhopTiepTheo()">Tiếp theo ⏭</button>
                         <button class="btn-clear-flags" id="btnClearFlags" style="display:none;" onclick="xoaTatCaCo()">🗑️ Xóa cờ (0)</button>
-                        <div class="sync-status-msg" id="syncStatusMsg">💡 Click trực tiếp vào đúng chữ đang nghe để cắm cờ 🚩 (tự bù phản xạ theo tốc độ phát). Nếu dùng ô tìm kiếm, hãy tạm dừng audio trước khi bấm.</div>
+                        <div class="sync-status-msg" id="syncStatusMsg">💡 Click trực tiếp vào đúng chữ đang nghe để cắm cờ 🚩 (tự bù phản xạ theo tốc độ phát). Khi hết tập, hệ thống tự động nối tiếp sang tập sau.</div>
                     </div>
 
                     <div class="reader-content" id="readerContent">Đang tải nội dung từ máy chủ...</div>
@@ -881,6 +881,7 @@
         let searchMatchCursor = 0;
         let phaseOffsetSec = 0.0;
         const REACTION_SEC = 0.4; // độ trễ phản xạ khi click (giây thực), tự nhân với playbackRate
+        let inheritedAnchor = null; // Lưu { targetEpIndex, startWeight } khi chuyển nối tiếp từ tập trước
 
         const storyWpsStorageKey = `txt_story_wps_v4_${encodeURIComponent(layTenChuan(currentThuMuc))}`;
         let calibratedWps = parseFloat(localStorage.getItem(storyWpsStorageKey) || '4.5');
@@ -911,7 +912,7 @@
                     else if (/["”'’)\]]+$/.test(part)) trail = 0.8;
 
                     startW = accWeight + lead;          // từ bắt đầu SAU phần nghỉ mở ngoặc
-                    accWeight += 1.0 + lead + trail;    // tổng trọng số y hệt bản cũ
+                    accWeight += 1.0 + lead + trail;    // tổng trọng số
                 }
                 tokens.push({ str: part, startW: startW, endW: accWeight, charEnd: charPos });
             }
@@ -951,6 +952,8 @@
             const el = document.getElementById('phaseOffsetDisplay');
             if (el) el.innerText = '0.0s';
 
+            const idx = currentItem ? (parseInt(currentItem.getAttribute('data-index')) || 0) : 0;
+
             try {
                 const raw = localStorage.getItem(getFlagsStorageKey());
                 episodeFlags = raw ? JSON.parse(raw) : [];
@@ -959,6 +962,25 @@
             } catch (e) {
                 episodeFlags = [];
             }
+
+            // Nếu tập mới chưa có cờ nào nhưng có mốc nối tiếp từ tập trước -> tự tạo cờ mốc 00:00
+            if (episodeFlags.length === 0 && inheritedAnchor && inheritedAnchor.targetEpIndex === idx && paragraphMap.length > 0) {
+                let matchedIdx = 0;
+                for (let i = 0; i < paragraphMap.length; i++) {
+                    if (paragraphMap[i].endWeight >= inheritedAnchor.startWeight) {
+                        matchedIdx = i;
+                        break;
+                    }
+                }
+                episodeFlags.push({
+                    audioTime: 0,
+                    weightPos: inheritedAnchor.startWeight,
+                    paraIndex: matchedIdx
+                });
+                luuDanhSachCo();
+                return;
+            }
+
             capNhatGiaoDienCacCo();
         }
 
@@ -1031,7 +1053,6 @@
 
         function camCoTaiDoanVan(paraObj, customPrefix = null, charOffset = 0, fromClick = false) {
             if (!paraObj) return;
-            // Click lúc đang phát: audio đã chạy thêm ~REACTION_SEC thực tế, tương đương nhiều giây audio hơn ở 1.7x
             const comp = (fromClick && !player.paused) ? REACTION_SEC * player.playbackRate : 0;
             const curAudioTime = Math.max(0, (player.currentTime || 0) + phaseOffsetSec - comp);
             const weightPos = weightTaiKyTu(paraObj, charOffset);
@@ -1068,6 +1089,7 @@
 
         function xoaTatCaCo() {
             episodeFlags = [];
+            inheritedAnchor = null;
             phaseOffsetSec = 0.0;
             const phaseEl = document.getElementById('phaseOffsetDisplay');
             if (phaseEl) phaseEl.innerText = '0.0s';
@@ -1110,8 +1132,6 @@
                 paraObj.litCount = -1;
             }
 
-            // Token sáng lên ngay khi từ bắt đầu được đọc; khoảng nghỉ sau dấu câu
-            // sẽ hiện ra đúng là highlight đứng yên trên từ vừa đọc xong.
             let n = 0;
             while (n < paraObj.tokens.length && paraObj.tokens[n].startW <= elapsed) n++;
 
@@ -1144,7 +1164,7 @@
             });
 
             paragraphMap.forEach(p => {
-                if (p === lastActiveParaObj) p.spokenNode = null; // buộc dựng lại ở frame kế
+                if (p === lastActiveParaObj) p.spokenNode = null;
                 else renderNoiDungDoanVan(p, null);
             });
 
@@ -1191,6 +1211,13 @@
                 return Math.max(0, Math.min(totalSpeechWeight, pos));
             }
 
+            // Ưu tiên nối tiếp vị trí kết thúc từ tập liền trước nếu tập mới chưa cắm cờ
+            if (inheritedAnchor && inheritedAnchor.targetEpIndex === idx) {
+                const pos = inheritedAnchor.startWeight + t * currentWps;
+                return Math.max(0, Math.min(totalSpeechWeight, pos));
+            }
+
+            // Fallback cuối cùng khi mở ngang một tập bất kỳ lần đầu
             const curDur = player.duration || chapterDurations[idx] || 1;
             let ratio = 0;
             if (hasValidDurations && totalSeriesDuration > 0) {
@@ -1421,6 +1448,13 @@
 
         player.addEventListener('ended', function() {
             if (currentItem && currentItem.nextElementSibling) {
+                const curIdx = parseInt(currentItem.getAttribute('data-index')) || 0;
+                const endWeight = tinhViTriTrongSoHienTai();
+                inheritedAnchor = {
+                    targetEpIndex: curIdx + 1,
+                    startWeight: endWeight
+                };
+
                 let nextEl = currentItem.nextElementSibling;
                 let onclickStr = nextEl.getAttribute('onclick');
                 let match = onclickStr.match(/chonVaPhatChuongTeraBox\('(.*?)',\s*'(.*?)'/);
