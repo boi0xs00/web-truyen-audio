@@ -316,6 +316,27 @@
             font-size: 11.5px;
         }
         .speed-tuner button:hover { background: #52556b; }
+        .speed-tuner input {
+            width: 52px;
+            background-color: #131419;
+            border: 1px solid #3f4152;
+            color: var(--accent-yellow);
+            font-weight: bold;
+            font-size: 12px;
+            text-align: center;
+            border-radius: 3px;
+            padding: 2px 3px;
+            outline: none;
+            -moz-appearance: textfield;
+        }
+        .speed-tuner input::-webkit-outer-spin-button,
+        .speed-tuner input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .speed-tuner input:focus {
+            border-color: var(--accent-yellow);
+        }
 
         /* THANH NHẬP KHỚP VỊ TRÍ & QUẢN LÝ CỜ */
         .sync-anchor-bar {
@@ -750,11 +771,13 @@
                         <div class="reader-controls">
                             <button class="reader-btn btn-drop-flag" onclick="camCoTaiDoanDangChon()" title="Cắm cờ tại đoạn đang tô sáng">🚩 Cắm cờ</button>
                             <button class="reader-btn active-sync" id="btnAutoSync" onclick="toggleAutoSync()">🔄 Tự cuộn: BẬT</button>
-                            <div class="speed-tuner" title="Tinh chỉnh nhịp chữ chạy (từ/giây audio)">
+                            <div class="speed-tuner" title="Nhập trực tiếp hoặc bấm -/+ để chỉnh nhịp chữ chạy (từ/giây audio)">
                                 <span>Nhịp:</span>
-                                <button onclick="tinhChinhNhip(-0.2)">-</button>
-                                <span id="wpsDisplay">4.5</span>
-                                <button onclick="tinhChinhNhip(0.2)">+</button>
+                                <button onclick="tinhChinhNhip(-0.1)">-</button>
+                                <input type="number" id="wpsInput" step="0.05" min="1.0" max="15.0" value="4.5"
+                                       onchange="nhapNhipTrucTiep(this.value)"
+                                       onkeydown="if(event.key==='Enter'){ nhapNhipTrucTiep(this.value); this.blur(); }">
+                                <button onclick="tinhChinhNhip(0.1)">+</button>
                             </div>
                             <div class="speed-tuner" title="Dịch pha dải chữ vàng sớm/trễ so với tiếng đọc">
                                 <span>Pha:</span>
@@ -775,7 +798,7 @@
                         <button class="btn-anchor-go" onclick="timVaKhopMoc()">🎯 Tìm & Cắm cờ</button>
                         <button class="btn-anchor-next" id="btnAnchorNext" style="display:none;" onclick="chuyenKetQuaKhopTiepTheo()">Tiếp theo ⏭</button>
                         <button class="btn-clear-flags" id="btnClearFlags" style="display:none;" onclick="xoaTatCaCo()">🗑️ Xóa cờ (0)</button>
-                        <div class="sync-status-msg" id="syncStatusMsg">💡 Click trực tiếp vào đúng chữ đang nghe để cắm cờ 🚩 (tự bù phản xạ theo tốc độ phát). Khi hết tập, hệ thống tự động nối tiếp sang tập sau.</div>
+                        <div class="sync-status-msg" id="syncStatusMsg">💡 Click trực tiếp vào đúng chữ đang nghe để cắm cờ 🚩 (tự bù phản xạ theo tốc độ phát). Bạn có thể gõ trực tiếp số vào ô <b>Nhịp</b> và nhấn Enter.</div>
                     </div>
 
                     <div class="reader-content" id="readerContent">Đang tải nội dung từ máy chủ...</div>
@@ -922,12 +945,24 @@
         }
 
         function capNhatHienThiWps() {
-            const el = document.getElementById('wpsDisplay');
-            if (el) el.innerText = calibratedWps.toFixed(1);
+            const el = document.getElementById('wpsInput');
+            if (el) el.value = calibratedWps.toFixed(2).replace(/\.00$/, '.0');
+        }
+
+        function nhapNhipTrucTiep(rawVal) {
+            const parsed = parseFloat(String(rawVal).replace(',', '.'));
+            if (isNaN(parsed)) {
+                capNhatHienThiWps();
+                return;
+            }
+            calibratedWps = Math.max(1.0, Math.min(15.0, Math.round(parsed * 100) / 100));
+            localStorage.setItem(storyWpsStorageKey, calibratedWps.toString());
+            capNhatHienThiWps();
+            dongBoViTriText(true);
         }
 
         function tinhChinhNhip(delta) {
-            calibratedWps = Math.max(1.5, Math.min(12.0, Math.round((calibratedWps + delta) * 10) / 10));
+            calibratedWps = Math.max(1.0, Math.min(15.0, Math.round((calibratedWps + delta) * 100) / 100));
             localStorage.setItem(storyWpsStorageKey, calibratedWps.toString());
             capNhatHienThiWps();
             dongBoViTriText(true);
@@ -1019,8 +1054,8 @@
             }
 
             if (totalDeltaTime > 0 && totalDeltaWeight > 0) {
-                const measured = Math.max(1.5, Math.min(12.0, totalDeltaWeight / totalDeltaTime));
-                calibratedWps = Math.round(measured * 10) / 10;
+                const measured = Math.max(1.0, Math.min(15.0, totalDeltaWeight / totalDeltaTime));
+                calibratedWps = Math.round(measured * 100) / 100;
                 localStorage.setItem(storyWpsStorageKey, calibratedWps.toString());
                 capNhatHienThiWps();
             }
@@ -1073,7 +1108,7 @@
             const statusEl = document.getElementById('syncStatusMsg');
             if (statusEl) {
                 const speedNote = episodeFlags.length >= 2
-                    ? ` | Nhịp đo được: ${measuredWps.toFixed(1)} (có thể chỉnh +/- bất cứ lúc nào)`
+                    ? ` | Nhịp đo được: ${measuredWps.toFixed(2).replace(/\.00$/, '.0')} (có thể chỉnh +/- hoặc nhập số)`
                     : ` | Cắm thêm 1 cờ sau vài chục giây để tự đo nhịp đọc`;
                 statusEl.innerText = `${customPrefix || `🚩 Đã cắm cờ tại ${formatTime(curAudioTime)}`}${speedNote}`;
             }
